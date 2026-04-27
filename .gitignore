@@ -5,6 +5,10 @@ dist/
 *.log
 .DS_Store
 
+# Claude Code harness runtime state (session-scoped — PID, lock files, etc.).
+# Project-shared Claude config (settings.json, skills/) is not blocked.
+.claude/*.lock
+
 # packages/worker/assets/ is the phone-ui build output (created by `bun run build:phone`).
 # wrangler.toml requires the directory to exist; only the .gitkeep is tracked.
 /packages/worker/assets/*
