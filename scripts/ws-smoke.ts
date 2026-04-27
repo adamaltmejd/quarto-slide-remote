@@ -3,7 +3,7 @@
 //
 // Assumes wrangler dev is already running on localhost:8787.
 
-const BASE = process.env['SR_BASE'] ?? 'http://localhost:8787';
+const BASE = process.env.SR_BASE ?? 'http://localhost:8787';
 const WS_BASE = BASE.replace(/^http/, 'ws');
 
 interface RoomBody {

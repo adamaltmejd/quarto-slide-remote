@@ -19,7 +19,7 @@ const sourceExt = resolve(repoRoot, '_extensions', 'slide-remote');
 const pluginSrc = resolve(repoRoot, 'packages', 'deck-plugin', 'src');
 const buildScript = resolve(repoRoot, 'packages', 'deck-plugin', 'build.ts');
 
-const consumer = process.env['SLIDE_REMOTE_CONSUMER'];
+const consumer = process.env.SLIDE_REMOTE_CONSUMER;
 if (!consumer) {
   console.error('error: SLIDE_REMOTE_CONSUMER env var not set');
   console.error(

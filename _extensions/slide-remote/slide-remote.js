@@ -164,7 +164,6 @@
     reconnectAttempt = 0;
     reconnectTimer;
     closed = false;
-    pendingState;
     flushTimer;
     constructor(workerUrl, reveal, handlers) {
       this.workerUrl = workerUrl;
@@ -297,7 +296,6 @@
       if (!this.room)
         return;
       const state = extractState(this.reveal, this.room.roomId);
-      this.pendingState = state;
       if (this.ws?.readyState === WebSocket.OPEN) {
         const msg = { t: "state", payload: state };
         this.ws.send(JSON.stringify(msg));
@@ -1988,7 +1986,7 @@
       const qrHost = this.el.querySelector(".sr-overlay__qr");
       if (qrHost) {
         qrHost.innerHTML = qrSvg(joinUrl, 256);
-        qrHost.dataset["joinUrl"] = joinUrl;
+        qrHost.dataset.joinUrl = joinUrl;
       }
       this.codeEl.textContent = roomId;
       if (!this.el.isConnected)
@@ -2020,7 +2018,7 @@
       this.el.remove();
     }
     setState(state, text) {
-      this.el.dataset["state"] = state;
+      this.el.dataset.state = state;
       const t = this.el.querySelector(".sr-badge__text");
       if (t)
         t.textContent = text;

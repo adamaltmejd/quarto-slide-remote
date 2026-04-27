@@ -50,7 +50,7 @@ export class Overlay {
     const qrHost = this.el.querySelector<HTMLDivElement>('.sr-overlay__qr');
     if (qrHost) {
       qrHost.innerHTML = qrSvg(joinUrl, 256);
-      qrHost.dataset['joinUrl'] = joinUrl;
+      qrHost.dataset.joinUrl = joinUrl;
     }
     this.codeEl.textContent = roomId;
     if (!this.el.isConnected) document.body.appendChild(this.el);
@@ -89,7 +89,7 @@ export class StatusBadge {
   }
 
   setState(state: 'connected' | 'reconnecting' | 'disconnected', text: string): void {
-    this.el.dataset['state'] = state;
+    this.el.dataset.state = state;
     const t = this.el.querySelector<HTMLSpanElement>('.sr-badge__text');
     if (t) t.textContent = text;
   }

@@ -63,12 +63,16 @@ const bodyChildrenBefore = document.body.children.length;
 
 // Track keydown listeners attached to document.
 let keydownListeners = 0;
-const realAdd = document.addEventListener.bind(document);
-// biome-ignore lint/suspicious/noExplicitAny: addEventListener overloads
-document.addEventListener = ((type: string, ...rest: unknown[]) => {
+type AddEventListener = typeof document.addEventListener;
+const realAdd = document.addEventListener.bind(document) as AddEventListener;
+document.addEventListener = ((
+  type: Parameters<AddEventListener>[0],
+  listener: Parameters<AddEventListener>[1],
+  options?: Parameters<AddEventListener>[2],
+) => {
   if (type === 'keydown') keydownListeners++;
-  return (realAdd as any)(type, ...rest);
-}) as typeof document.addEventListener;
+  realAdd(type, listener, options);
+}) as AddEventListener;
 
 // Stub Reveal: only the methods init() touches.
 const reveal = {
@@ -87,10 +91,12 @@ const reveal = {
   addKeyBinding: () => {},
 };
 
-// Evaluate the IIFE in the global scope.
+// Evaluate the IIFE in the global scope. Aliasing eval to a local binding
+// invokes it as an indirect call so it runs in the global lexical scope.
 const code = await readFile(bundlePath, 'utf8');
 // biome-ignore lint/security/noGlobalEval: bundle is built from our own source
-(0, eval)(code);
+const indirectEval = eval;
+indirectEval(code);
 
 const SlideRemote = (globalThis as { SlideRemote?: () => { init: (r: unknown) => void } })
   .SlideRemote;
