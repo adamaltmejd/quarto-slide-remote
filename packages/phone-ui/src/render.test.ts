@@ -165,10 +165,10 @@ describe('phone-ui render', () => {
     ui.destroy();
   });
 
-  test('showRepaired replaces the body with a fresh-QR message', () => {
+  test('showFatal replaces the body with a fresh-QR message', () => {
     const ui = buildUi(noopHandlers());
     document.body.append(ui.root);
-    ui.showRepaired();
+    ui.showFatal('Re-pair: scan a fresh QR code from the deck.');
     expect(ui.root.querySelector('.sr__btn--next')).toBeNull();
     expect(ui.root.querySelector('.sr-fatal')?.textContent).toContain('fresh QR');
   });

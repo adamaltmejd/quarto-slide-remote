@@ -1,7 +1,4 @@
-// Phone UI entry. Pulls roomId from /r/:roomId, token from URL hash, then
-// connects to the worker as a viewer and wires the controls to commands.
-
-import { buildUi } from './render';
+import { buildFatal, buildUi } from './render';
 import { clearSession, loadSession, saveSession } from './session';
 import { WakeLockManager } from './wake-lock';
 import { ViewerClient, type ViewerStatus } from './ws';
@@ -15,6 +12,8 @@ const STATUS_TEXT = {
   error: 'error',
 } as const;
 
+const REPAIR_TEXT = 'Re-pair: scan a fresh QR code from the deck.';
+
 function parseRoomId(): string | null {
   const m = /^\/r\/([^/]+)/.exec(window.location.pathname);
   return m?.[1] ?? null;
@@ -27,7 +26,7 @@ function parseToken(): string | null {
 }
 
 function fatal(text: string): void {
-  document.body.innerHTML = `<main class="sr-fatal"><h1>slide-remote</h1><p>${text}</p></main>`;
+  document.body.replaceChildren(buildFatal(text));
 }
 
 const roomId = parseRoomId();
@@ -60,7 +59,7 @@ const ui = buildUi({
     client.stop();
     void wakeLock.release();
     clearSession();
-    ui.showRepaired();
+    ui.showFatal(REPAIR_TEXT);
   },
 });
 document.body.replaceChildren(ui.root);

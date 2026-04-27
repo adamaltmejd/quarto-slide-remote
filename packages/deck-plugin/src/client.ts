@@ -23,10 +23,13 @@ export type ClientStatus =
   | 'disconnected'
   | 'failed';
 
+// Commands that have a direct Reveal-side effect. `resetTimer` is excluded
+// because it only mutates Client instance state, and lives in handleServerMessage.
+type RevealCommand = Exclude<Command, 'resetTimer'>;
+
 // Pure command dispatch. Exported so tests can exercise it without standing
-// up a WebSocket / fetch / mint flow. `resetTimer` is handled by the
-// stateful Client wrapper, not here, since it has no Reveal-side effect.
-export function applyRemoteCommand(reveal: RevealApi, cmd: Command, args: unknown): void {
+// up a WebSocket / fetch / mint flow.
+export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: unknown): void {
   switch (cmd) {
     case 'next':
       reveal.next();
@@ -41,9 +44,6 @@ export function applyRemoteCommand(reveal: RevealApi, cmd: Command, args: unknow
     }
     case 'black':
       reveal.togglePause();
-      break;
-    case 'resetTimer':
-      // Handled by Client (instance state); intentionally a no-op on Reveal.
       break;
   }
 }

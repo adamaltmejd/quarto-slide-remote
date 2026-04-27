@@ -28,6 +28,7 @@ export class ViewerClient {
   private attempt = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private closed = false;
+  private onOnline = (): void => this.reconnectNow();
 
   constructor(
     private base: string,
@@ -35,7 +36,7 @@ export class ViewerClient {
     private token: string,
     private handlers: ClientHandlers,
   ) {
-    addEventListener('online', () => this.reconnectNow());
+    addEventListener('online', this.onOnline);
   }
 
   start(): void {
@@ -45,6 +46,7 @@ export class ViewerClient {
   stop(): void {
     this.closed = true;
     clearTimeout(this.timer);
+    removeEventListener('online', this.onOnline);
     this.ws?.close();
   }
 

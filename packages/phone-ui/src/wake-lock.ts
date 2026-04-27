@@ -44,6 +44,10 @@ export class WakeLockManager {
   /** Release the lock and stop trying to re-acquire it. */
   async release(): Promise<void> {
     this.wanted = false;
+    if (this.vizListener) {
+      document.removeEventListener('visibilitychange', this.vizListener);
+      this.vizListener = undefined;
+    }
     const s = this.sentinel;
     this.sentinel = undefined;
     if (s && !s.released) {

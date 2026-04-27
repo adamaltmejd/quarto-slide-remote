@@ -1,5 +1,3 @@
-// Phone UI rendering — plain DOM, no framework.
-
 import type { SlideState } from '@slide-remote/protocol';
 import type { ViewerStatus } from './ws';
 
@@ -14,8 +12,8 @@ export interface UI {
   showError(msg: string): void;
   showToast(text: string, opts?: { tone?: ToastTone; sticky?: boolean }): void;
   hideToast(): void;
-  /** Replace the body with a "scan a fresh QR" message. Terminal. */
-  showRepaired(): void;
+  /** Replace the body with a terminal "scan a fresh QR" message. */
+  showFatal(text: string): void;
   /** Tear down the seconds-tick interval. Call before discarding the UI. */
   destroy(): void;
 }
@@ -45,6 +43,12 @@ function el<K extends keyof HTMLElementTagNameMap>(
   if (className) e.className = className;
   if (text !== undefined) e.textContent = text;
   return e;
+}
+
+export function buildFatal(text: string): HTMLElement {
+  const fatal = el('main', 'sr-fatal');
+  fatal.append(el('h1', undefined, 'slide-remote'), el('p', undefined, text));
+  return fatal;
 }
 
 function loadNotesSizeIndex(): number {
@@ -77,7 +81,6 @@ function formatElapsed(ms: number): string {
 }
 
 export function buildUi(handlers: UIHandlers): UI {
-  // ── top bar ──────────────────────────────────────────────────────────────
   const dot = el('span', 'sr__dot');
   dot.dataset.state = 'connecting';
   dot.setAttribute('aria-hidden', 'true');
@@ -122,12 +125,10 @@ export function buildUi(handlers: UIHandlers): UI {
     repairBtn,
   );
 
-  // ── connection toast ─────────────────────────────────────────────────────
   const toastEl = el('div', 'sr__toast');
   toastEl.setAttribute('role', 'status');
   toastEl.hidden = true;
 
-  // ── title block ──────────────────────────────────────────────────────────
   const posEl = el('span', 'sr__pos');
   const titleTextEl = el('span', 'sr__title-text', '—');
   const titleRow = el('div', 'sr__title');
@@ -141,11 +142,9 @@ export function buildUi(handlers: UIHandlers): UI {
   const titleBlock = el('div', 'sr__head');
   titleBlock.append(titleRow, nextRow);
 
-  // ── notes ────────────────────────────────────────────────────────────────
   const notesEl = el('div', 'sr__notes');
   notesEl.setAttribute('aria-live', 'polite');
 
-  // ── error ────────────────────────────────────────────────────────────────
   const errorEl = el('div', 'sr__error');
   errorEl.setAttribute('role', 'alert');
   errorEl.hidden = true;
@@ -153,7 +152,6 @@ export function buildUi(handlers: UIHandlers): UI {
   const body = el('main', 'sr__body');
   body.append(toastEl, titleBlock, notesEl, errorEl);
 
-  // ── controls ─────────────────────────────────────────────────────────────
   const nextBtn = el('button', 'sr__btn sr__btn--next', 'NEXT');
   nextBtn.type = 'button';
   nextBtn.setAttribute('aria-label', 'Next slide');
@@ -177,11 +175,9 @@ export function buildUi(handlers: UIHandlers): UI {
   const controls = el('footer', 'sr__controls');
   controls.append(nextBtn, secondaryRow);
 
-  // ── root ─────────────────────────────────────────────────────────────────
   const root = el('div', 'sr');
   root.append(top, body, controls);
 
-  // ── notes text-size persistence ──────────────────────────────────────────
   let sizeIdx = loadNotesSizeIndex();
   const applySize = (): void => {
     notesEl.style.setProperty('--sr-notes-scale', String(NOTES_SIZE_STEPS[sizeIdx]));
@@ -202,26 +198,32 @@ export function buildUi(handlers: UIHandlers): UI {
   });
   applySize();
 
-  // ── elapsed timer (ticks locally based on snapshot's startedAt) ─────────
   let startedAt: number | undefined;
+  let lastTimerText: string | undefined;
+  let lastTimerDisabled: boolean | undefined;
   const renderTimer = (): void => {
-    if (startedAt === undefined) {
-      timerEl.textContent = '--:--';
-      timerEl.disabled = true;
-    } else {
-      timerEl.textContent = formatElapsed(Date.now() - startedAt);
-      timerEl.disabled = false;
+    const text = startedAt === undefined ? '--:--' : formatElapsed(Date.now() - startedAt);
+    const disabled = startedAt === undefined;
+    if (text !== lastTimerText) {
+      timerEl.textContent = text;
+      lastTimerText = text;
+    }
+    if (disabled !== lastTimerDisabled) {
+      timerEl.disabled = disabled;
+      lastTimerDisabled = disabled;
     }
   };
   const tickInterval = setInterval(renderTimer, 1000);
 
-  // ── connection toast ─────────────────────────────────────────────────────
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
-  const showToast = (text: string, opts: { tone?: ToastTone; sticky?: boolean } = {}): void => {
+  const clearToastTimer = (): void => {
     if (toastTimer) {
       clearTimeout(toastTimer);
       toastTimer = undefined;
     }
+  };
+  const showToast = (text: string, opts: { tone?: ToastTone; sticky?: boolean } = {}): void => {
+    clearToastTimer();
     toastEl.textContent = text;
     toastEl.dataset.tone = opts.tone ?? 'warn';
     toastEl.hidden = false;
@@ -233,11 +235,15 @@ export function buildUi(handlers: UIHandlers): UI {
     }
   };
   const hideToast = (): void => {
-    if (toastTimer) {
-      clearTimeout(toastTimer);
-      toastTimer = undefined;
-    }
+    clearToastTimer();
     toastEl.hidden = true;
+  };
+
+  let lastNotes: string | undefined;
+  let notesRendered = false;
+  const destroy = (): void => {
+    clearInterval(tickInterval);
+    clearToastTimer();
   };
 
   return {
@@ -263,11 +269,16 @@ export function buildUi(handlers: UIHandlers): UI {
         nextEl.textContent = '';
         nextRow.hidden = true;
       }
-      if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
-      else notesEl.textContent = 'No notes for this slide.';
+      if (!notesRendered || s.notesHtml !== lastNotes) {
+        if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
+        else notesEl.textContent = 'No notes for this slide.';
+        lastNotes = s.notesHtml;
+        notesRendered = true;
+      }
       const paused = s.isPaused === true;
-      pauseBtn.dataset.active = paused ? 'true' : 'false';
-      pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      const pausedStr = paused ? 'true' : 'false';
+      pauseBtn.dataset.active = pausedStr;
+      pauseBtn.setAttribute('aria-pressed', pausedStr);
       pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';
       startedAt = s.startedAt;
       renderTimer();
@@ -278,20 +289,10 @@ export function buildUi(handlers: UIHandlers): UI {
     },
     showToast,
     hideToast,
-    showRepaired() {
-      clearInterval(tickInterval);
-      if (toastTimer) clearTimeout(toastTimer);
-      root.replaceChildren();
-      const fatal = el('main', 'sr-fatal');
-      fatal.append(
-        el('h1', undefined, 'slide-remote'),
-        el('p', undefined, 'Re-pair: scan a fresh QR code from the deck.'),
-      );
-      root.append(fatal);
+    showFatal(text) {
+      destroy();
+      root.replaceChildren(buildFatal(text));
     },
-    destroy() {
-      clearInterval(tickInterval);
-      if (toastTimer) clearTimeout(toastTimer);
-    },
+    destroy,
   };
 }

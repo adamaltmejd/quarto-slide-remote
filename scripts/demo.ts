@@ -12,7 +12,7 @@
 // canonical `_extensions/slide-remote/`, so a long-running `bun run demo`
 // session never clobbers the committed minified bundle.
 
-import { mkdir } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import { networkInterfaces, platform } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +22,7 @@ const repoRoot = resolve(here, '..');
 const demoDir = resolve(repoRoot, 'demo');
 const cacheDir = resolve(demoDir, '.cache');
 const pluginBundle = resolve(cacheDir, 'slide-remote.js');
+const phoneUiAsset = resolve(repoRoot, 'packages', 'worker', 'assets', 'main.js');
 // CSS is checked in (no build step), so we serve it directly.
 const pluginCss = resolve(repoRoot, '_extensions', 'slide-remote', 'slide-remote.css');
 
@@ -72,12 +73,31 @@ function spawnWatch(
   return proc;
 }
 
+// Polls `path` until its mtime is newer than `since`. Required because a stale
+// bundle from a prior `bun run demo` would otherwise satisfy a plain existence
+// check before the watcher's initial rebuild lands.
+async function waitForFreshFile(path: string, since: number, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const s = await stat(path);
+      if (s.mtimeMs > since) return;
+    } catch {
+      // doesn't exist yet
+    }
+    await Bun.sleep(100);
+  }
+  throw new Error(`[demo] ${path} did not refresh within ${timeoutMs}ms`);
+}
+
 async function waitForWorker(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url, { method: 'POST' });
-      if (res.ok || res.status < 500) return;
+      // GET (not POST) — POST /api/room/new would mint a real Durable Object
+      // room on every retry. Any HTTP response (incl. 4xx) means the worker is up.
+      const res = await fetch(url);
+      if (res.status < 500) return;
     } catch {
       // not ready yet
     }
@@ -96,27 +116,31 @@ function openBrowser(url: string): void {
   Bun.spawn(cmd, { stdout: 'ignore', stderr: 'ignore' });
 }
 
-// ── 1. Initial builds ─────────────────────────────────────────────────────
-//
 // SLIDE_REMOTE_PLUGIN_OUT redirects deck-plugin output into demo/.cache/
 // (gitignored) so the demo never dirties the committed minified bundle in
 // `_extensions/slide-remote/`.
-console.log('[demo] building plugin + phone UI…');
 await mkdir(cacheDir, { recursive: true });
 const pluginEnv = { SLIDE_REMOTE_PLUGIN_OUT: pluginBundle };
-await Promise.all([
-  buildOnce('plugin', ['packages/deck-plugin/build.ts'], pluginEnv),
-  buildOnce('phone-ui', ['packages/phone-ui/build.ts']),
-]);
-
-// ── 2. Watchers (rebuild on src changes) ──────────────────────────────────
 const children: ReturnType<typeof Bun.spawn>[] = [];
-if (!noWatch) {
+
+if (noWatch) {
+  console.log('[demo] building plugin + phone UI…');
+  await Promise.all([
+    buildOnce('plugin', ['packages/deck-plugin/build.ts'], pluginEnv),
+    buildOnce('phone-ui', ['packages/phone-ui/build.ts']),
+  ]);
+} else {
+  console.log('[demo] building plugin + phone UI (watch)…');
+  const startedAt = Date.now();
   children.push(spawnWatch('plugin', ['packages/deck-plugin/build.ts', '--watch'], pluginEnv));
   children.push(spawnWatch('phone-ui', ['packages/phone-ui/build.ts', '--watch']));
+  await Promise.all([
+    waitForFreshFile(pluginBundle, startedAt, 30_000),
+    waitForFreshFile(phoneUiAsset, startedAt, 30_000),
+  ]);
 }
 
-// ── 3. Worker (wrangler dev, bound to 0.0.0.0 so a phone on Wi-Fi can pair)
+// Worker: wrangler dev, bound to 0.0.0.0 so a phone on Wi-Fi can pair.
 console.log(`[demo] starting worker on :${WORKER_PORT}`);
 const wrangler = Bun.spawn(
   ['bunx', 'wrangler', 'dev', '--port', String(WORKER_PORT), '--ip', '0.0.0.0'],
@@ -128,9 +152,8 @@ const wrangler = Bun.spawn(
   },
 );
 children.push(wrangler);
-await waitForWorker(`http://127.0.0.1:${WORKER_PORT}/api/room/new`, 30_000);
+await waitForWorker(`http://127.0.0.1:${WORKER_PORT}/`, 30_000);
 
-// ── 4. Static deck server ─────────────────────────────────────────────────
 const server = Bun.serve({
   port: DECK_PORT,
   hostname: '0.0.0.0',
@@ -158,7 +181,6 @@ const server = Bun.serve({
   },
 });
 
-// ── 5. Banner + browser ───────────────────────────────────────────────────
 const ip = lanIp();
 const localUrl = `http://127.0.0.1:${DECK_PORT}/`;
 const lanUrl = `http://${ip}:${DECK_PORT}/`;
@@ -173,14 +195,9 @@ console.log('');
 
 if (!noOpen) openBrowser(localUrl);
 
-// ── 6. Cleanup ────────────────────────────────────────────────────────────
-//
-// Children (wrangler dev + plugin watch + phone-ui watch) don't reliably die
-// when the parent does. macOS doesn't ship a `PR_SET_PDEATHSIG` equivalent we
-// can wire to, so we belt-and-suspenders: handle every signal the parent is
-// likely to receive, plus uncaught errors, plus the synchronous `'exit'`
-// callback as a last resort. SIGKILL on the parent still leaves orphans —
-// nothing portable rescues that case.
+// Cleanup. macOS has no PR_SET_PDEATHSIG equivalent, so children don't die
+// with the parent automatically. Cover every signal + the synchronous 'exit'
+// callback as fallback. SIGKILL on the parent still leaves orphans.
 let shuttingDown = false;
 const killChildren = (signal: NodeJS.Signals = 'SIGINT'): void => {
   for (const c of children) {
@@ -209,9 +226,6 @@ process.on('unhandledRejection', (e) => {
   console.error('[demo] unhandled rejection:', e);
   shutdown(1);
 });
-// 'exit' fires synchronously after `process.exit()` and after the event loop
-// drains. Final synchronous SIGKILL ensures no child outlives us when the
-// graceful shutdown above didn't run (e.g. main `await` rejected silently).
 process.on('exit', () => killChildren('SIGKILL'));
 
 // Keep the event loop alive until SIGINT.
