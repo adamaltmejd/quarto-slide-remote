@@ -15,7 +15,7 @@ interface RoomBody {
   joinUrl: string;
 }
 
-const externalBase = process.env['SR_BASE'];
+const externalBase = process.env.SR_BASE;
 let base = externalBase ?? '';
 let wrangler: ChildProcess | undefined;
 
@@ -35,7 +35,53 @@ async function waitForPort(url: string, timeoutMs: number): Promise<void> {
   throw new Error(`wrangler dev did not become ready at ${url}`);
 }
 
-const enabled = !!process.env['SR_INTEGRATION'];
+const enabled = !!process.env.SR_INTEGRATION;
+
+// Send a raw WebSocket upgrade handshake over TCP and return the HTTP status
+// line. Used to probe auth rejection: bun's `WebSocket` polyfill emits the
+// underlying EventEmitter 'error' event without a listener when the upgrade
+// is refused (oven-sh/bun#11706, #5951), which bun:test surfaces as an
+// unhandled error. A raw socket sidesteps the polyfill entirely.
+async function probeUpgradeStatus(host: string, port: number, path: string): Promise<number> {
+  const request = [
+    `GET ${path} HTTP/1.1`,
+    `Host: ${host}:${port}`,
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    'Sec-WebSocket-Version: 13',
+    'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+    '',
+    '',
+  ].join('\r\n');
+
+  let buf = '';
+  const status = new Promise<number>((resolve, reject) => {
+    Bun.connect({
+      hostname: host,
+      port,
+      socket: {
+        open(socket) {
+          socket.write(request);
+        },
+        data(socket, data) {
+          buf += new TextDecoder().decode(data);
+          const m = buf.match(/^HTTP\/1\.1 (\d{3})/);
+          if (m) {
+            socket.end();
+            resolve(Number.parseInt(m[1] ?? '', 10));
+          }
+        },
+        error(_socket, err) {
+          reject(err);
+        },
+        close() {
+          if (!buf) reject(new Error('socket closed before status line'));
+        },
+      },
+    }).catch(reject);
+  });
+  return status;
+}
 
 async function mintRoom(): Promise<RoomBody> {
   const res = await fetch(`${base}/api/room/new`, { method: 'POST' });
@@ -179,9 +225,19 @@ describe.skipIf(!enabled)('worker integration', () => {
     viewer.ws.close();
   });
 
-  // Bad-token rejection is covered by scripts/ws-smoke.ts (manual run); not
-  // suitable for bun:test because bun's WebSocket polyfill emits 'error' as
-  // an EventEmitter event the test runner sees as unhandled. See ROADMAP.
+  test('presenter upgrade is rejected with 401 on bad token', async () => {
+    const room = await mintRoom();
+    const path = `/api/ws?room=${room.roomId}&role=presenter&token=wrong`;
+    const status = await probeUpgradeStatus('127.0.0.1', HTTP_PORT, path);
+    expect(status).toBe(401);
+  });
+
+  test('presenter upgrade succeeds (101) with the right token', async () => {
+    const room = await mintRoom();
+    const path = `/api/ws?room=${room.roomId}&role=presenter&token=${room.presenterToken}`;
+    const status = await probeUpgradeStatus('127.0.0.1', HTTP_PORT, path);
+    expect(status).toBe(101);
+  });
 
   test('late viewer receives snapshot from DO storage', async () => {
     const room = await mintRoom();
