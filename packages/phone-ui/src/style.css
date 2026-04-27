@@ -58,7 +58,6 @@ body {
   background: #facc15;
 }
 .sr__dot[data-state="disconnected"],
-.sr__dot[data-state="error"],
 .sr__dot[data-state="failed"] {
   background: #f87171;
 }
@@ -265,21 +264,24 @@ body {
   text-align: center;
   letter-spacing: 0.01em;
   animation: sr-toast-in 180ms ease;
+  background: var(--sr-toast-bg);
+  color: var(--sr-toast-fg);
+  border: 1px solid var(--sr-toast-border);
 }
 .sr__toast[data-tone="good"] {
-  background: rgba(34, 197, 94, 0.16);
-  color: #bbf7d0;
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  --sr-toast-bg: rgba(34, 197, 94, 0.16);
+  --sr-toast-fg: #bbf7d0;
+  --sr-toast-border: rgba(34, 197, 94, 0.35);
 }
 .sr__toast[data-tone="warn"] {
-  background: rgba(250, 204, 21, 0.14);
-  color: #fde68a;
-  border: 1px solid rgba(250, 204, 21, 0.35);
+  --sr-toast-bg: rgba(250, 204, 21, 0.14);
+  --sr-toast-fg: #fde68a;
+  --sr-toast-border: rgba(250, 204, 21, 0.35);
 }
 .sr__toast[data-tone="bad"] {
-  background: rgba(248, 113, 113, 0.16);
-  color: #fecaca;
-  border: 1px solid rgba(248, 113, 113, 0.4);
+  --sr-toast-bg: rgba(248, 113, 113, 0.16);
+  --sr-toast-fg: #fecaca;
+  --sr-toast-border: rgba(248, 113, 113, 0.4);
 }
 @keyframes sr-toast-in {
   from {

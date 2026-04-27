@@ -31,6 +31,8 @@ export class Overlay {
   private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
   private linkEl: HTMLAnchorElement;
+  private lastJoinUrl?: string;
+  private onKeydown: (e: KeyboardEvent) => void;
 
   constructor(handlers: OverlayHandlers) {
     this.qrHost = el('div', 'sr-overlay__qr');
@@ -70,20 +72,29 @@ export class Overlay {
     this.root.addEventListener('click', (e) => {
       if (e.target === this.root) handlers.onClose();
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.root.isConnected) handlers.onClose();
-    });
+
+    this.onKeydown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') handlers.onClose();
+    };
   }
 
   open(joinUrl: string, roomId: string): void {
-    this.qrHost.innerHTML = qrSvg(joinUrl, 256);
-    this.qrHost.dataset.joinUrl = joinUrl;
+    if (joinUrl !== this.lastJoinUrl) {
+      this.qrHost.innerHTML = qrSvg(joinUrl, 256);
+      this.qrHost.dataset.joinUrl = joinUrl;
+      this.linkEl.href = joinUrl;
+      this.lastJoinUrl = joinUrl;
+    }
     this.codeEl.textContent = roomId;
-    this.linkEl.href = joinUrl;
-    if (!this.root.isConnected) document.body.appendChild(this.root);
+    if (!this.root.isConnected) {
+      document.body.appendChild(this.root);
+      document.addEventListener('keydown', this.onKeydown);
+    }
   }
 
   close(): void {
+    if (!this.root.isConnected) return;
+    document.removeEventListener('keydown', this.onKeydown);
     this.root.remove();
   }
 

@@ -85,4 +85,58 @@ describe('WakeLockManager', () => {
     await m.acquire();
     await m.release();
   });
+
+  test('release removes the visibilitychange listener it registered', async () => {
+    const sentinel = makeSentinel();
+    const request = mock(async () => sentinel);
+    (navigator as unknown as { wakeLock?: { request: typeof request } }).wakeLock = { request };
+
+    const added: Array<{ type: string; listener: EventListener }> = [];
+    const removed: Array<{ type: string; listener: EventListener }> = [];
+    const origAdd = document.addEventListener.bind(document);
+    const origRemove = document.removeEventListener.bind(document);
+    document.addEventListener = ((type: string, listener: EventListener) => {
+      added.push({ type, listener });
+      origAdd(type, listener);
+    }) as typeof document.addEventListener;
+    document.removeEventListener = ((type: string, listener: EventListener) => {
+      removed.push({ type, listener });
+      origRemove(type, listener);
+    }) as typeof document.removeEventListener;
+
+    try {
+      const m = new WakeLockManager();
+      await m.acquire();
+      const addedViz = added.filter((c) => c.type === 'visibilitychange');
+      expect(addedViz.length).toBe(1);
+
+      await m.release();
+      const removedViz = removed.filter((c) => c.type === 'visibilitychange');
+      expect(removedViz.length).toBe(1);
+      expect(removedViz[0]?.listener).toBe(addedViz[0]?.listener);
+    } finally {
+      document.addEventListener = origAdd;
+      document.removeEventListener = origRemove;
+    }
+  });
+
+  test('release during a pending request drops the resolved sentinel', async () => {
+    const sentinel = makeSentinel();
+    let resolveRequest: ((s: typeof sentinel) => void) | undefined;
+    const request = mock(
+      () =>
+        new Promise<typeof sentinel>((r) => {
+          resolveRequest = r;
+        }),
+    );
+    (navigator as unknown as { wakeLock?: { request: typeof request } }).wakeLock = { request };
+
+    const m = new WakeLockManager();
+    const acquiring = m.acquire();
+    await m.release();
+    resolveRequest?.(sentinel);
+    await acquiring;
+
+    expect(sentinel.release).toHaveBeenCalledTimes(1);
+  });
 });

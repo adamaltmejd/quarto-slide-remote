@@ -66,6 +66,12 @@ export class WakeLockManager {
     if (document.visibilityState !== 'visible') return;
     try {
       const s = await api.request('screen');
+      // release() may have run while we awaited the request — drop the
+      // sentinel immediately if so, instead of latching onto a dead lock.
+      if (!this.wanted) {
+        void s.release().catch(() => {});
+        return;
+      }
       this.sentinel = s;
       s.addEventListener('release', () => {
         if (this.sentinel === s) this.sentinel = undefined;

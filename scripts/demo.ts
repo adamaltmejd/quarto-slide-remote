@@ -90,6 +90,25 @@ async function waitForFreshFile(path: string, since: number, timeoutMs: number):
   throw new Error(`[demo] ${path} did not refresh within ${timeoutMs}ms`);
 }
 
+async function assertPortFree(port: number): Promise<void> {
+  // If something already responds on the port, fail fast with an actionable
+  // error instead of letting the new wrangler crash silently and hanging in
+  // waitForWorker for 30s.
+  try {
+    const ctl = AbortController ? new AbortController() : undefined;
+    const timer = ctl ? setTimeout(() => ctl.abort(), 500) : undefined;
+    const res = await fetch(`http://127.0.0.1:${port}/`, { signal: ctl?.signal });
+    if (timer) clearTimeout(timer);
+    void res.body?.cancel();
+  } catch {
+    // Connection refused / aborted / no listener — what we want.
+    return;
+  }
+  throw new Error(
+    `[demo] port ${port} is already in use — is another \`bun run demo\` running? Try: lsof -i :${port}`,
+  );
+}
+
 async function waitForWorker(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -141,6 +160,8 @@ if (noWatch) {
 }
 
 // Worker: wrangler dev, bound to 0.0.0.0 so a phone on Wi-Fi can pair.
+await assertPortFree(WORKER_PORT);
+await assertPortFree(DECK_PORT);
 console.log(`[demo] starting worker on :${WORKER_PORT}`);
 const wrangler = Bun.spawn(
   ['bunx', 'wrangler', 'dev', '--port', String(WORKER_PORT), '--ip', '0.0.0.0'],

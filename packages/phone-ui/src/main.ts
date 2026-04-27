@@ -9,7 +9,6 @@ const STATUS_TEXT = {
   reconnecting: 'reconnecting…',
   disconnected: 'disconnected',
   failed: 'failed',
-  error: 'error',
 } as const;
 
 const REPAIR_TEXT = 'Re-pair: scan a fresh QR code from the deck.';

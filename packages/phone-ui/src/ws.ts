@@ -8,13 +8,7 @@ const BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
 // phone shows 'failed' instead of spinning indefinitely.
 const MAX_RECONNECT_ATTEMPTS = 60;
 
-export type ViewerStatus =
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected'
-  | 'failed'
-  | 'error';
+export type ViewerStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
 
 export interface ClientHandlers {
   onStatus(text: ViewerStatus): void;
