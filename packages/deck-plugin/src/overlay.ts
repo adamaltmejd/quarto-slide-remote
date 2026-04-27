@@ -30,6 +30,9 @@ export class Overlay {
   private statusEl: HTMLSpanElement;
   private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
+  private linkEl: HTMLAnchorElement;
+  private lastJoinUrl?: string;
+  private onKeydown: (e: KeyboardEvent) => void;
 
   constructor(handlers: OverlayHandlers) {
     this.qrHost = el('div', 'sr-overlay__qr');
@@ -45,6 +48,12 @@ export class Overlay {
     const meta = el('div', 'sr-overlay__meta');
     meta.append(row('Room', this.codeEl), row('Status', this.statusEl), row('Phones', this.peerEl));
 
+    // Plain-text fallback for users without a phone camera, and a quick way
+    // to open the phone UI in a second browser window for a laptop-only test.
+    this.linkEl = el('a', 'sr-overlay__link', 'open on this device');
+    this.linkEl.target = '_blank';
+    this.linkEl.rel = 'noopener noreferrer';
+
     const panel = el('div', 'sr-overlay__panel');
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
@@ -54,6 +63,7 @@ export class Overlay {
       el('h2', 'sr-overlay__title', 'Pair your phone'),
       this.qrHost,
       meta,
+      this.linkEl,
       el('p', 'sr-overlay__hint', 'Scan with your iPhone camera. Press Esc to dismiss.'),
     );
 
@@ -62,19 +72,29 @@ export class Overlay {
     this.root.addEventListener('click', (e) => {
       if (e.target === this.root) handlers.onClose();
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.root.isConnected) handlers.onClose();
-    });
+
+    this.onKeydown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') handlers.onClose();
+    };
   }
 
   open(joinUrl: string, roomId: string): void {
-    this.qrHost.innerHTML = qrSvg(joinUrl, 256);
-    this.qrHost.dataset.joinUrl = joinUrl;
+    if (joinUrl !== this.lastJoinUrl) {
+      this.qrHost.innerHTML = qrSvg(joinUrl, 256);
+      this.qrHost.dataset.joinUrl = joinUrl;
+      this.linkEl.href = joinUrl;
+      this.lastJoinUrl = joinUrl;
+    }
     this.codeEl.textContent = roomId;
-    if (!this.root.isConnected) document.body.appendChild(this.root);
+    if (!this.root.isConnected) {
+      document.body.appendChild(this.root);
+      document.addEventListener('keydown', this.onKeydown);
+    }
   }
 
   close(): void {
+    if (!this.root.isConnected) return;
+    document.removeEventListener('keydown', this.onKeydown);
     this.root.remove();
   }
 

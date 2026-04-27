@@ -93,18 +93,26 @@ in your deck.
 ```bash
 bun install
 
-# Build/watch the plugin and copy it into a consumer deck on every change.
+# One-command demo: builds the plugin + phone UI, boots `wrangler dev`,
+# serves a fixture reveal.js deck at http://127.0.0.1:5174/, and opens
+# the deck in your default browser. No consumer slides repo needed.
+bun run demo
+
+# Or, build/watch the plugin and copy it into a real consumer deck:
 SLIDE_REMOTE_CONSUMER=/path/to/your-deck-repo bun run dev:install
-
-# In the consumer:
+# then in the consumer:
 quarto preview path/to/lecture.qmd   # then append ?remote=1 to the URL
+# (and in a separate terminal: `bun run dev:worker`)
 ```
 
-In a separate terminal, run a local Worker instance:
+The fixture deck (`demo/index.html`) exercises notes, fragments, vertical
+stacks, and a no-notes slide. Press **Shift+R** to summon the QR overlay;
+to test on the laptop alone, copy the link beneath the QR code into a
+second browser window. To pair a real phone, open the LAN URL printed on
+startup on the phone (same Wi-Fi).
 
-```bash
-bun run dev:worker
-```
+`bun run demo -- --no-open` skips the auto browser launch.
+`bun run demo -- --no-watch` builds once and skips watch mode.
 
 `dev:install` overwrites the consumer's `_extensions/slide-remote/` as you
 edit. Add that path to the consumer repo's `.gitignore` while iterating;

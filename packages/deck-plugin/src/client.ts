@@ -23,9 +23,13 @@ export type ClientStatus =
   | 'disconnected'
   | 'failed';
 
+// Commands that have a direct Reveal-side effect. `resetTimer` is excluded
+// because it only mutates Client instance state, and lives in handleServerMessage.
+type RevealCommand = Exclude<Command, 'resetTimer'>;
+
 // Pure command dispatch. Exported so tests can exercise it without standing
 // up a WebSocket / fetch / mint flow.
-export function applyRemoteCommand(reveal: RevealApi, cmd: Command, args: unknown): void {
+export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: unknown): void {
   switch (cmd) {
     case 'next':
       reveal.next();
@@ -56,6 +60,9 @@ export class Client {
   private room?: RoomCreateResponse;
   private reconnectAttempt = 0;
   private flushTimer?: ReturnType<typeof setTimeout>;
+  // Epoch ms when the deck first navigated, or after the most recent
+  // resetTimer command. Undefined until the first user navigation.
+  private startedAt?: number;
 
   constructor(
     private workerUrl: string,
@@ -138,7 +145,12 @@ export class Client {
   private handleServerMessage(msg: ServerMessage): void {
     switch (msg.t) {
       case 'cmd':
-        applyRemoteCommand(this.reveal, msg.cmd, msg.args);
+        if (msg.cmd === 'resetTimer') {
+          this.startedAt = Date.now();
+          this.pumpStateSoon();
+        } else {
+          applyRemoteCommand(this.reveal, msg.cmd, msg.args);
+        }
         break;
       case 'peer':
         this.handlers.onPeerCount(msg.presenter, msg.viewer);
@@ -165,6 +177,12 @@ export class Client {
       'overviewhidden',
     ];
     for (const ev of events) this.reveal.on(ev, () => this.pumpStateSoon());
+    // First user navigation starts the elapsed timer. Reveal does not fire
+    // 'slidechanged' on initial setup (that's 'ready'), so this listener is
+    // safe — it can't false-trigger on init.
+    this.reveal.on('slidechanged', () => {
+      if (this.startedAt === undefined) this.startedAt = Date.now();
+    });
   }
 
   private pumpStateSoon(): void {
@@ -178,7 +196,7 @@ export class Client {
 
   private pumpStateNow(): void {
     if (!this.room) return;
-    const state = extractState(this.reveal, this.room.roomId);
+    const state = extractState(this.reveal, this.room.roomId, this.startedAt);
     if (this.ws?.readyState === WebSocket.OPEN) {
       const msg: ClientMessage = { t: 'state', payload: state };
       this.ws.send(JSON.stringify(msg));

@@ -13,3 +13,8 @@ dist/
 # wrangler.toml requires the directory to exist; only the .gitkeep is tracked.
 /packages/worker/assets/*
 !/packages/worker/assets/.gitkeep
+
+# `bun run demo` writes an unminified plugin bundle here (via
+# SLIDE_REMOTE_PLUGIN_OUT) so the watch loop never dirties the committed
+# minified bundle in `_extensions/slide-remote/`.
+/demo/.cache/

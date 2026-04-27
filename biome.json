@@ -5,9 +5,11 @@
       "**",
       "!node_modules",
       "!.wrangler",
+      "!**/.wrangler",
       "!dist",
       "!_extensions/slide-remote/slide-remote.js",
-      "!packages/worker/assets"
+      "!packages/worker/assets",
+      "!demo/.cache"
     ]
   },
   "formatter": {

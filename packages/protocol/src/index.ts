@@ -11,7 +11,7 @@
 
 export type Role = 'presenter' | 'viewer';
 
-export type Command = 'next' | 'prev' | 'goto' | 'black';
+export type Command = 'next' | 'prev' | 'goto' | 'black' | 'resetTimer';
 
 export interface SlideState {
   roomId: string;
@@ -24,6 +24,10 @@ export interface SlideState {
   nextTitle?: string;
   fragmentsLeft?: number;
   isPaused?: boolean;
+  // Epoch ms when the deck first navigated. Lets every viewer agree on
+  // an elapsed-timer value without each maintaining its own clock.
+  // Undefined until the presenter advances at least once.
+  startedAt?: number;
   ts: number;
 }
 

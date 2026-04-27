@@ -1,9 +1,25 @@
 {
   "name": "slide-remote",
   "short_name": "slide-remote",
+  "description": "iPhone remote + speaker-notes companion for reveal.js decks",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#0a0a0a",
   "background_color": "#0a0a0a",
   "start_url": "/",
-  "icons": []
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }

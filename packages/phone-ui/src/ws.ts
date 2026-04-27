@@ -8,13 +8,7 @@ const BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
 // phone shows 'failed' instead of spinning indefinitely.
 const MAX_RECONNECT_ATTEMPTS = 60;
 
-export type ViewerStatus =
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected'
-  | 'failed'
-  | 'error';
+export type ViewerStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'failed';
 
 export interface ClientHandlers {
   onStatus(text: ViewerStatus): void;
@@ -28,6 +22,7 @@ export class ViewerClient {
   private attempt = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private closed = false;
+  private onOnline = (): void => this.reconnectNow();
 
   constructor(
     private base: string,
@@ -35,7 +30,7 @@ export class ViewerClient {
     private token: string,
     private handlers: ClientHandlers,
   ) {
-    addEventListener('online', () => this.reconnectNow());
+    addEventListener('online', this.onOnline);
   }
 
   start(): void {
@@ -45,6 +40,7 @@ export class ViewerClient {
   stop(): void {
     this.closed = true;
     clearTimeout(this.timer);
+    removeEventListener('online', this.onOnline);
     this.ws?.close();
   }
 

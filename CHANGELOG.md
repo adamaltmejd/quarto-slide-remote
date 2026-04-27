@@ -6,6 +6,83 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — deck UI lives invisibly while paired
+
+- **Status badge moved to top-right** (was bottom-right) so it never
+  collides with reveal.js's bottom-right `slideNumber` widget that
+  consumers commonly enable.
+- **Badge is hidden in steady state** when paired. It only appears for
+  `reconnecting` / `disconnected` / `failed`, where the presenter actually
+  needs to see something is wrong. The deck looks untouched while the
+  system is working.
+- **Pairing overlay now shows a clickable join URL** ("open on this
+  device") below the QR. Useful for laptop-only test runs and as a
+  fallback when phone cameras struggle to read the QR.
+
+### Added — phone speaker companion polish
+
+- **Elapsed timer** in the phone top bar. The deck plugin starts a clock
+  on first user navigation (Reveal `slidechanged`), ships it as
+  `startedAt` in every snapshot, and the phone formats it `mm:ss`.
+  Tap-to-reset sends a new `cmd: 'resetTimer'` which the deck applies
+  and re-broadcasts, so multiple paired phones agree on the value
+  without each maintaining its own clock.
+- **Re-pair affordance** (small ↻ button at the right of the top bar).
+  Stops the WebSocket, releases the wake lock, clears the stored
+  session token, and replaces the body with "scan a fresh QR". Builds
+  on the already-exported `clearSession()`.
+- **Connection toast.** Transient banner above the title surfaces the
+  `reconnecting…`, `reconnected`, and `failed` transitions louder than
+  the colored status dot. Auto-dismisses after 2.5 s for transients;
+  sticks for `failed` so the presenter doesn't miss the terminal state.
+- **PWA polish.** App icon (vector — `pwa/icon.svg`) wired through
+  `apple-touch-icon`, `<link rel=icon>`, and the manifest icons array
+  with `purpose: any` and `purpose: maskable`. Manifest gains
+  `description`, `orientation: portrait`, and `scope`. iOS 16+ accepts
+  SVG apple-touch-icons; older iOS falls back to a generic Safari icon
+  (acceptable for v0.x).
+- **Phone UI layout overhaul.** Dominant full-width NEXT button with PREV
+  and PAUSE sharing a 50/50 row beneath it. Stronger title hierarchy
+  (current slide bold and full-color, next-slide title prefixed `Next:`
+  and dimmed). Notes panel is independently scrollable with momentum
+  scrolling so long notes never push the action buttons off-screen. The
+  body itself no longer scrolls.
+- **Notes text-size +/− controls** in the top bar, persisted in
+  `localStorage` (`slide-remote.notes-size`). Five steps from 0.85× to
+  1.5×; default 1×. Buttons disable at the rail ends.
+- **`touch-action: manipulation`** on every action and size button, so
+  rapid NEXT-tapping never accidentally pinch-zooms the phone UI. The
+  viewport meta intentionally keeps `user-scalable=yes` for accessibility.
+- **PAUSE → black-screen** wired. The phone PAUSE button now sends
+  `cmd: 'black'`, which the deck plugin already dispatches via
+  `Reveal.togglePause()`. The button reflects the deck's `isPaused`
+  state from the snapshot — flips to `RESUME` and changes color while
+  the deck is paused.
+- **Screen wake lock** while paired. `navigator.wakeLock.request('screen')`
+  is acquired on `connected` and released on `failed` (browsers
+  auto-release on tab hide; we re-acquire on `visibilitychange`). Silent
+  no-op where the API isn't available. Prevents iOS Safari from putting
+  the screen to sleep mid-talk and dropping the WebSocket. Lives in
+  `packages/phone-ui/src/wake-lock.ts`.
+
+### Protocol
+
+- **`Command` union extended with `'resetTimer'`** — viewer→presenter
+  message that resets the deck's `startedAt` and triggers a fresh
+  snapshot.
+- **`SlideState.startedAt?: number`** — epoch ms of the deck's first
+  navigation. Undefined until the presenter advances at least once.
+
+### Tooling
+
+- `bun test` is now **84 tests across 9 files** (was 65 across 7). New
+  suites: `render.test.ts` covers the layout, PAUSE↔isPaused reflection,
+  next-row hide-when-empty, notes-size persistence, the elapsed timer,
+  the re-pair flow, and the connection toast; `wake-lock.test.ts`
+  covers acquire/release/error paths with a fake `navigator.wakeLock`.
+  `extract.test.ts` and the protocol round-trip suite cover the new
+  `startedAt` field and `resetTimer` command.
+
 ## [0.1.1] — 2026-04-27
 
 Documentation patch. The hardening listed below landed in the v0.1.0
