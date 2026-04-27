@@ -1,61 +1,46 @@
 # Roadmap
 
-Working toward a stable, publishable v0.1 release. Items above the current
-working state are stable and shipped; items below describe what's still open.
+**Status:** v0.1.1 shipped 2026-04-27 at
+[github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
+(public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
+v0.2 work starts here.
 
-Current state: **v0.1.0 shipped** (2026-04-27) at
-`https://github.com/adamaltmejd/quarto-slide-remote`. Public repo, MIT,
-annotated tag + GitHub Release published. Remaining v0.1 item is the EC7422
-consumer cutover.
-
----
-
-## v0.1 — Release-ready MVP
-
-The MVP itself is functional. To declare v0.1.0 done, fill in the engineering
-quality and packaging items below.
-
-### Done
-
-- [x] Quarto extension: `_extensions/slide-remote/` with revealjs-plugin + filter contributions
-- [x] Cloudflare Worker + Durable Object (RoomDO) with one-secret auth, hibernation API, snapshot persistence
-- [x] Deck plugin: silent by default; `?remote=1` / `Shift+R` activation; QR pairing overlay; corner status badge; WS client with reconnect/backoff
-- [x] State extraction: title, indices, notes (allowlist-sanitized), next-slide title, fragments-left
-- [x] Phone UI: viewer client, layout, prev/next, reconnect, localStorage session, hash-token capture and stripping
-- [x] End-to-end smoke test (`packages/worker/test/integration.test.ts`, gated by `SR_INTEGRATION=1`)
-- [x] Theme-independence: plugin uses only Reveal's public API and standard DOM contract; CSS scoped under `.sr-*`
-- [x] Worker deployed (`slide-remote.adamaltmejd.workers.dev`) and consumer wired in EC7422 lectures
-- [x] Notes sanitizer drops dangerous container tags (`<style>`, `<script>`, `<svg>`, `<math>`, …)
-
-### Quality and tooling — done
-
-- [x] `lint` (`biome check`), `format` (`biome check --write`), `test` (`bun test`), `size`, `test:smoke` package scripts
-- [x] `bun test` + happy-dom unit tests:
-  - [x] `sanitize.ts` — `<style>` leak regression, allowlist, `data:image/` only on `img.src`, `javascript:` blocked everywhere (20 tests)
-  - [x] `extract.ts` — title fallback chain, 64 KB notes cap, next-slide title across vertical/horizontal stacks (13 tests)
-  - [x] `protocol/index.ts` — JSON round-trip across SlideState / ClientMessage / ServerMessage (7 tests)
-- [x] `packages/worker/test/integration.test.ts` — boots `wrangler dev` itself; gated by `SR_INTEGRATION=1` so default `bun test` stays fast. Six cases covering room mint, presenter↔viewer round-trip, viewer→presenter `cmd` forwarding, role enforcement, late-viewer snapshot replay, and a raw-TCP `probeUpgradeStatus()` for 401/101 auth checks (sidesteps bun#11706 / bun#5951)
-- [x] Pre-commit hook via `git config core.hooksPath .githooks` (`bun run hooks:install`); `.githooks/pre-commit` runs lint + typecheck + tests
-- [x] GitHub Actions CI (`.github/workflows/ci.yml`): three jobs — `unit` (lint → typecheck → bun test → build → size), `integration` (`bun run test:smoke`), `decktape-silent` (assert no socket / DOM / console writes under `?handout=true`)
-- [x] Bundle-size budget at 30 KB gzip enforced by `scripts/size-check.ts` (current minified bundle: 30 KB raw / **11.4 KB gzip**)
-- [x] Minified release build via `bun run build:plugin:min`; `bun run deploy` uses it before `wrangler deploy`
-- [x] Decktape-silent assertion via `scripts/check-decktape-silent.ts` (happy-dom env, eval'd IIFE, asserts wsCount == 0, no body mutations, no keydown listener, no console writes)
-
-### Documentation and packaging
-
-- [x] LICENSE file (MIT)
-- [x] CHANGELOG.md (Keep-a-Changelog style; v0.1.0 entry)
-- [x] Expanded README: install steps, YAML config table, road-test flow, troubleshooting, theme-independence note, project layout, CI badge
-- [x] Push the repo to GitHub (`adamaltmejd/quarto-slide-remote`)
-- [x] Tag `v0.1.0` and publish a GitHub Release (notes pulled from CHANGELOG)
-- [x] Tag `v0.1.1` documenting post-review hardening that landed in v0.1.0's tagged commit but was missed by its release notes (CHANGELOG-only patch)
-- [ ] Switch the EC7422 course repo from dev-install to `quarto add` once the tag is live; remove the gitignore line
+The MVP is functional end-to-end: deck → QR → phone → WS → Worker →
+Durable Object. Quality gates (biome lint, tsc typecheck, 65 unit tests,
+integration smoke test, 3-scenario decktape-silent invariant, 30 KB gzip
+bundle budget) run in CI on every push. The full v0.1 ledger — what's
+implemented, hardened, and tested — lives in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## v0.2 — Speaker companion polish (Phase 3)
+## v0.1 — open item
 
-Adds the "feels like a clicker" features. Each is small enough to ship alone.
+- [ ] Switch the EC7422 course repo from `dev-install` to
+      `quarto add adamaltmejd/quarto-slide-remote@v0.1.1` and drop the
+      `_extensions/slide-remote/` entry from its `.gitignore`. Lives in
+      the consumer repo, not this one.
+
+---
+
+## v0.2 — Speaker companion polish
+
+The "feels like a clicker" features. Each item is small enough to ship
+alone — pick one off the list.
+
+### Suggested order
+
+The phone UI layout overhaul and the black-screen toggle naturally pair
+(the new layout's PAUSE button *is* the black-screen toggle). Wake lock
+is a one-liner with outsized value for iOS road-tests. After those three,
+the rest is order-agnostic.
+
+1. Phone UI layout overhaul (below)
+2. Black-screen toggle — wire the PAUSE button to `cmd: 'black'`
+3. Wake lock — `navigator.wakeLock.request('screen')` while paired
+4. Re-pair affordance — surface the already-exported `clearSession()`
+5. Elapsed timer
+6. Connection toast
+7. PWA polish
 
 ### Phone UI layout overhaul
 
@@ -84,16 +69,16 @@ fast-tapping. Target shape:
 - [ ] **PREV + PAUSE share a row** below NEXT, each taking half-width. PAUSE is the black-screen toggle (`cmd: 'black'`).
 - [ ] **Disable double-tap-zoom**: add `touch-action: manipulation` on the action buttons (and probably the controls row) so rapid NEXT-tapping never accidentally pinch-zooms the phone UI. Avoid `user-scalable=no` on the viewport meta — that hurts accessibility.
 - [ ] **Stronger title hierarchy**: current slide title visually dominant (larger weight, full-color); next-slide title appears immediately under it, clearly secondary (smaller, dimmer, prefixed e.g. "Next:"). Both legible at arm's length, but unmistakably differentiated. Tighten existing notes-area styling to give the title block more presence.
-- [ ] **Notes box overflow and text size**: with controls taking a chunk of the viewport, the notes panel must be independently scrollable (not the whole body), with momentum scroll and visible scroll affordance. Set a sensible default text size for arm's-length reading; offer +/− controls (or pinch-on-the-notes-area only) to adjust, persisted in localStorage. Long unbroken tokens (URLs, long words, code) should wrap; overflow-x must never exceed the viewport.
+- [ ] **Notes box overflow and text size**: with controls taking a chunk of the viewport, the notes panel must be independently scrollable (not the whole body), with momentum scroll and visible scroll affordance. Set a sensible default text size for arm's-length reading; offer +/− controls (or pinch-on-the-notes-area only) to adjust, persisted in localStorage. v0.1.1 already wraps long unbroken tokens and gives `<pre>` horizontal overflow — build on that, don't redo it.
 
 ### Other polish
 
-- [ ] **Black-screen toggle**: phone button → `cmd: 'black'` → `Reveal.togglePause()`. Verify the deck's `.reveal.paused` style renders as actual black against `datascience-theme.scss`; add a self-scoped overlay rule if needed.
+- [ ] **Black-screen toggle**: phone PAUSE button → `cmd: 'black'` → `Reveal.togglePause()`. The protocol command and the deck-side dispatch are already wired (`applyRemoteCommand` in `deck-plugin/src/client.ts`); only the phone button is missing. Verify the deck's `.reveal.paused` style renders as actual black against `datascience-theme.scss`; add a self-scoped overlay rule if needed.
 - [ ] **Elapsed timer**: starts on first navigation, `mm:ss`, tap to reset. Persisted across phone reconnect via `startedAt` in the snapshot so multiple viewers agree.
 - [ ] **Wake lock**: `navigator.wakeLock.request('screen')` while paired; release on visibility change. Critical for iOS Safari + Low Power Mode.
 - [ ] **PWA polish**: real apple-touch-icon, app icons in `manifest.webmanifest`, theme-color, dark/light splash.
-- [ ] **Re-pair affordance on phone**: a small "re-pair" link that clears localStorage and shows a "scan a fresh QR" message.
-- [ ] **Connection toast**: a momentary banner on the phone when the deck disconnects/reconnects, instead of just a status dot.
+- [ ] **Re-pair affordance on phone**: a small "re-pair" link that calls `clearSession()` (already exported from `phone-ui/src/session.ts`) and shows a "scan a fresh QR" message.
+- [ ] **Connection toast**: a momentary banner on the phone when the deck disconnects/reconnects, instead of just a status dot. Especially useful to surface the new `'failed'` terminal state more loudly than the dot color.
 
 ---
 
@@ -102,11 +87,11 @@ fast-tapping. Target shape:
 - [ ] **Jump-to-slide / overview**: phone shows the slide list (title + thumb-friendly tap targets); selecting one sends `cmd: 'goto'`. Useful when the talk goes off-script.
 - [ ] **Haptic feedback**: short tap when `cmd` is acknowledged (`navigator.vibrate` is iOS-limited; explore `expo-haptics`-style alternatives or accept Android-only).
 - [ ] **Token regeneration**: presenter shortcut (Shift+T?) to mint a new room mid-talk if a phone walked off with the old QR.
-- [ ] **Read-only viewer mode**: optional `?role=watch` for a participant who can see notes but not drive.
+- [ ] **Read-only viewer mode**: optional `?role=watch` for a participant who can see notes but not drive. Note that the worker doesn't currently enforce single-presenter (see protocol comment in `packages/protocol/src/index.ts`); read-only would need an actual role check in `RoomDO.webSocketMessage`.
 - [ ] **Service worker**: for offline phone-UI caching after first load. Defer until we hit a real flake; risks more than it solves.
 - [ ] **Apple Watch companion**: explicit non-goal for v0.x; revisit if the phone-as-clicker UX has friction in real talks.
 - [ ] **Telemetry**: minimal counters (rooms minted, commands sent, errors) so we can see real-world usage without storing presentation content.
-- [ ] **Idle DO cleanup**: alarm-driven 24h TTL is sketched but not wired in `RoomDO`; add it when usage justifies the cost discipline.
+- [ ] **Idle DO cleanup**: alarm-driven 24h TTL is sketched but not wired in `RoomDO`; add it when usage justifies the cost discipline. Pairs naturally with constraining `/api/room/new` CORS.
 
 ### Plugin performance
 
@@ -117,14 +102,14 @@ fast-tapping. Target shape:
 
 ## Risks and known issues
 
-Tracked here so we don't forget; not in any priority order.
+Tracked here so we don't forget; not in any priority order. Items resolved
+in v0.1.x are dropped — see CHANGELOG for closeouts.
 
-- **iOS Safari + Low Power Mode** drops WebSockets aggressively when the screen sleeps. Wake lock + fast reconnect helps but the screen-off → screen-on cycle needs explicit testing on a real device.
-- **`Reveal.togglePause()` styling** depends on `.reveal.paused`. Custom themes (e.g. `datascience-theme.scss`) may not render a true black; verify before relying on it for the black-screen feature.
+- **iOS Safari + Low Power Mode** drops WebSockets aggressively when the screen sleeps. The reconnect ceiling (`MAX_RECONNECT_ATTEMPTS = 60`) caps the spinner at ~15 minutes; wake lock + fast reconnect (both v0.2) help further, but the screen-off → screen-on cycle still needs explicit testing on a real device.
+- **`Reveal.togglePause()` styling** depends on `.reveal.paused`. Custom themes (e.g. `datascience-theme.scss`) may not render a true black; verify before relying on it for the v0.2 black-screen feature.
 - **DO SQLite + `new_sqlite_classes` migrations are one-way.** Pin compat date carefully and version any migration changes.
-- **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable for v0.1; document that "anyone with the QR can drive the deck" and revisit with token regeneration in v0.2.
-- **`/api/room/new` CORS** is currently `*`. Fine for now (the endpoint mints empty rooms; it's not abuse-worthy), but constrain to the deck's origin once deploying for real.
-- **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release.
-- **Bundle size**: 64 KB unminified is fine for dev but bloats the deck. Minify and gzip-budget before tagging v0.1.
-- **Notes sanitization** has a regression for `<style>` leakage that's now fixed; add it to the test suite before further changes.
-- **Course repo CI**: the existing `publish-course-material.yml` workflow renders decks with the plugin loaded. Confirm decktape's `?handout=true` keeps the plugin silent in CI; promote that check from a manual one to an asserted one.
+- **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable for v0.1; revisit with token regeneration in Beyond.
+- **`/api/room/new` CORS** is currently `*` and unrate-limited. Fine for the current scale (the endpoint mints empty rooms; it's not abuse-worthy on its own), but constrain to the deck's origin and pair with idle DO cleanup before broader deployment.
+- **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release. v0.1.0 + v0.1.1 followed this; future releases must too.
+- **Course repo CI**: the consumer's `publish-course-material.yml` renders decks with the plugin loaded. Our own CI proves silence across 3 scenarios (decktape, missing worker-url, kill switch). Promote the consumer's check from a manual one to an asserted one when the cutover happens.
+- **Multi-presenter is unenforced**: two presenter connections to the same room means last-write-wins on snapshots. Documented in `packages/protocol/src/index.ts`; `RoomDO.webSocketMessage` would need a role check to enforce single-presenter. Relevant for Beyond/read-only-viewer.
