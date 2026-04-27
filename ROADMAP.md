@@ -3,10 +3,10 @@
 Working toward a stable, publishable v0.1 release. Items above the current
 working state are stable and shipped; items below describe what's still open.
 
-Current state: **v0.1.0-rc** — MVP works end-to-end against a deployed Worker;
-quality + tooling and documentation are in place. Remaining work before
-tagging v0.1.0 is the GitHub push, the annotated tag, and switching the
-EC7422 consumer over to the published `quarto add`.
+Current state: **v0.1.0 shipped** (2026-04-27) at
+`https://github.com/adamaltmejd/quarto-slide-remote`. Public repo, MIT,
+annotated tag + GitHub Release published. Remaining v0.1 item is the EC7422
+consumer cutover.
 
 ---
 
@@ -46,8 +46,9 @@ quality and packaging items below.
 - [x] LICENSE file (MIT)
 - [x] CHANGELOG.md (Keep-a-Changelog style; v0.1.0 entry)
 - [x] Expanded README: install steps, YAML config table, road-test flow, troubleshooting, theme-independence note, project layout, CI badge
-- [ ] Push the repo to GitHub (`adamaltmejd/quarto-slide-remote`)
-- [ ] Tag `v0.1.0` and verify `quarto add adamaltmejd/quarto-slide-remote@v0.1.0` resolves cleanly in a fresh consumer
+- [x] Push the repo to GitHub (`adamaltmejd/quarto-slide-remote`)
+- [x] Tag `v0.1.0` and publish a GitHub Release (notes pulled from CHANGELOG)
+- [x] Tag `v0.1.1` documenting post-review hardening that landed in v0.1.0's tagged commit but was missed by its release notes (CHANGELOG-only patch)
 - [ ] Switch the EC7422 course repo from dev-install to `quarto add` once the tag is live; remove the gitignore line
 
 ---

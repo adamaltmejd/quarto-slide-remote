@@ -1,6 +1,6 @@
 {
   "name": "quarto-slide-remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "iPhone remote control + speaker-notes companion for static reveal.js decks",
   "workspaces": [

@@ -6,6 +6,49 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-04-27
+
+Documentation patch. The hardening listed below landed in the v0.1.0
+tagged commit (after a pre-publish review pass) but was missed by the
+v0.1.0 release notes. v0.1.1 makes the CHANGELOG faithful so v0.2 work
+has a clean baseline. **No runtime changes vs. v0.1.0** — the v0.1.1
+source tree is identical to v0.1.0's apart from this CHANGELOG entry.
+
+### Hardened (already present in v0.1.0)
+
+- **Kill switch** via `<meta name="slide-remote-enabled" content="false">`
+  and silent bail-out when `worker-url` is empty. Both promised in
+  README/CHANGELOG for v0.1.0; the actual checks now live in
+  `packages/deck-plugin/src/config.ts`.
+- **Reconnect ceiling** (`MAX_RECONNECT_ATTEMPTS = 60`, ≈15 minutes once
+  the cap is reached) on both the deck client and the phone viewer,
+  surfacing a new `'failed'` status instead of spinning indefinitely
+  against a permanently-broken worker.
+- **Strict h1 > h2 > h3 title priority.** The previous comma-selector
+  returned whichever heading appeared first in DOM order; a deck with
+  `<h2>` before `<h1>` would title as the h2.
+- **Phone Content-Security-Policy meta** as defense-in-depth on the
+  notes `innerHTML` render path (`script-src 'self'`, `connect-src
+  'self' ws: wss:`, `object-src 'none'`).
+- **Notes overflow rules** on the phone: `<pre>` scrolls horizontally,
+  long unbroken tokens wrap, inline images cap at 100% width.
+- **Constant-time token compare** in `RoomDO` (`tokensEqual`). Theoretical
+  hardening — tokens are 128-bit random — but it removes the discussion.
+- **Stale localStorage cleanup** in the phone session: a roomId mismatch
+  now removes the entry instead of leaving it to ferment between talks.
+- **`applyRemoteCommand` extracted** as a pure exported function so command
+  dispatch is unit-testable without the full mint + WS flow.
+
+### Tooling (already present in v0.1.0)
+
+- `bun test` is **65 tests across 7 files** (was 40 across 3 in the
+  v0.1.0 release notes). New suites: `client.test.ts`, `config.test.ts`,
+  `session.test.ts`, plus extra `extract.test.ts` cases for heading
+  priority.
+- `scripts/check-decktape-silent.ts` now exercises **3 bail-out
+  scenarios** in one process: decktape `?handout=true`, missing
+  `worker-url`, and the `slide-remote-enabled="false"` kill switch.
+
 ## [0.1.0] — 2026-04-27
 
 Initial public release. iPhone-driven remote control + speaker-notes
@@ -61,5 +104,6 @@ beyond opening the deck URL.
 - GitHub Actions CI running unit, integration, and decktape-silent jobs.
 - Biome 2 lint + format with zero warnings/infos at release.
 
-[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.1
 [0.1.0]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.0
