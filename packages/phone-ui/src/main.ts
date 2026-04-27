@@ -2,9 +2,9 @@
 // connects to the worker as a viewer and wires the controls to commands.
 
 import { buildUi } from './render';
-import { loadSession, saveSession } from './session';
+import { clearSession, loadSession, saveSession } from './session';
 import { WakeLockManager } from './wake-lock';
-import { ViewerClient } from './ws';
+import { ViewerClient, type ViewerStatus } from './ws';
 
 const STATUS_TEXT = {
   connecting: 'connecting…',
@@ -49,21 +49,51 @@ if (tokenFromUrl) {
   history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 
+const wakeLock = new WakeLockManager();
+
 const ui = buildUi({
   onPrev: () => client.send('prev'),
   onNext: () => client.send('next'),
   onPause: () => client.send('black'),
+  onResetTimer: () => client.send('resetTimer'),
+  onRepair: () => {
+    client.stop();
+    void wakeLock.release();
+    clearSession();
+    ui.showRepaired();
+  },
 });
 document.body.replaceChildren(ui.root);
 ui.setRoom(roomId);
 
-const wakeLock = new WakeLockManager();
+// Track previous status so we can surface transitions (rather than absolute
+// state) via the toast — the persistent dot already covers absolute state.
+let prevStatus: ViewerStatus = 'connecting';
 
 const client = new ViewerClient(window.location.origin, roomId, token, {
   onStatus: (state) => {
     ui.setStatus(STATUS_TEXT[state], state);
-    if (state === 'connected') void wakeLock.acquire();
-    else if (state === 'failed') void wakeLock.release();
+    if (state === 'connected') {
+      void wakeLock.acquire();
+      // Only celebrate a *re*-connect, not the initial pair.
+      if (prevStatus === 'reconnecting' || prevStatus === 'disconnected') {
+        ui.showToast('reconnected', { tone: 'good' });
+      } else {
+        ui.hideToast();
+      }
+    } else if (state === 'reconnecting' || state === 'disconnected') {
+      // Don't toast on the initial 'connecting' → first connect handshake.
+      if (prevStatus !== 'connecting') {
+        ui.showToast('connection lost — reconnecting…', { tone: 'warn', sticky: true });
+      }
+    } else if (state === 'failed') {
+      void wakeLock.release();
+      ui.showToast("couldn't reconnect — re-pair or refresh", {
+        tone: 'bad',
+        sticky: true,
+      });
+    }
+    prevStatus = state;
   },
   onSnapshot: (msg) => ui.setState(msg.payload),
   onPeer: (presenter, viewer) => ui.setPeerCount(presenter, viewer),

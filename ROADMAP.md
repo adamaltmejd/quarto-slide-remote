@@ -27,20 +27,19 @@ implemented, hardened, and tested — lives in [CHANGELOG.md](CHANGELOG.md).
 The "feels like a clicker" features. Each item is small enough to ship
 alone — pick one off the list.
 
-### Suggested order
+### Status
 
-The phone UI layout overhaul, the black-screen toggle, and the wake lock
-shipped together (the new layout's PAUSE button *is* the black-screen
-toggle, and wake lock is a one-liner with outsized value for iOS).
-Remaining items are order-agnostic.
+All seven v0.2 items have shipped to `[Unreleased]`. v0.2 is **ready
+to tag**; once tagged, the consumer course repo can `quarto add
+…@v0.2.0` (replaces the v0.1.x cutover item above).
 
-1. ~~Phone UI layout overhaul (below)~~ — shipped Unreleased
-2. ~~Black-screen toggle — wire the PAUSE button to `cmd: 'black'`~~ — shipped Unreleased
-3. ~~Wake lock — `navigator.wakeLock.request('screen')` while paired~~ — shipped Unreleased
-4. Re-pair affordance — surface the already-exported `clearSession()`
-5. Elapsed timer
-6. Connection toast
-7. PWA polish
+1. ~~Phone UI layout overhaul (below)~~ — shipped
+2. ~~Black-screen toggle — wire the PAUSE button to `cmd: 'black'`~~ — shipped
+3. ~~Wake lock — `navigator.wakeLock.request('screen')` while paired~~ — shipped
+4. ~~Re-pair affordance — surface the already-exported `clearSession()`~~ — shipped
+5. ~~Elapsed timer~~ — shipped
+6. ~~Connection toast~~ — shipped
+7. ~~PWA polish~~ — shipped
 
 ### Phone UI layout overhaul
 
@@ -74,11 +73,11 @@ fast-tapping. Target shape:
 ### Other polish
 
 - [x] **Black-screen toggle**: phone PAUSE button → `cmd: 'black'` → `Reveal.togglePause()`. Button reflects the deck's `isPaused` state from snapshots and flips to `RESUME` while paused.
-- [ ] **Elapsed timer**: starts on first navigation, `mm:ss`, tap to reset. Persisted across phone reconnect via `startedAt` in the snapshot so multiple viewers agree.
+- [x] **Elapsed timer**: starts on first navigation (Reveal `slidechanged`), `mm:ss`, tap to reset (sends `cmd: 'resetTimer'`). Rides every snapshot as `startedAt`, so multiple paired phones agree on the value.
 - [x] **Wake lock**: `navigator.wakeLock.request('screen')` while connected; auto-released by browsers on tab hide; re-acquired on `visibilitychange` → `visible`. Silent no-op when the API is unavailable.
-- [ ] **PWA polish**: real apple-touch-icon, app icons in `manifest.webmanifest`, theme-color, dark/light splash.
-- [ ] **Re-pair affordance on phone**: a small "re-pair" link that calls `clearSession()` (already exported from `phone-ui/src/session.ts`) and shows a "scan a fresh QR" message.
-- [ ] **Connection toast**: a momentary banner on the phone when the deck disconnects/reconnects, instead of just a status dot. Especially useful to surface the new `'failed'` terminal state more loudly than the dot color.
+- [x] **PWA polish**: SVG `apple-touch-icon` and `<link rel=icon>`, manifest icons array (`any` + `maskable`), `description`, `orientation`, `scope`. Splash on Android is auto-derived from `theme_color` + `background_color` + icons. iOS startup images deferred (low value, fiddly per-device list).
+- [x] **Re-pair affordance on phone**: ↻ button in the top bar; stops the WS, releases the wake lock, calls `clearSession()`, and replaces the body with a "scan a fresh QR" message.
+- [x] **Connection toast**: transient banner above the title; auto-dismiss after 2.5 s for `reconnecting…` / `reconnected`, sticky for `failed`.
 
 ---
 

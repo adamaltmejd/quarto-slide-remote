@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>slide-remote</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a8a" />
+      <stop offset="1" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded background. iOS auto-clips to a squircle, but the radius keeps
+       it readable in browser tabs and as a maskable icon. -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)" />
+  <!-- Stylized slide deck: a back card and a front card with a play triangle. -->
+  <g fill="#f8fafc">
+    <rect x="120" y="148" width="296" height="184" rx="20" ry="20" opacity="0.28" />
+    <rect x="96" y="180" width="296" height="184" rx="20" ry="20" />
+  </g>
+  <!-- Play triangle on the front card, signalling "advance". -->
+  <path d="M 200 232 L 296 272 L 200 312 Z" fill="#1d4ed8" />
+</svg>

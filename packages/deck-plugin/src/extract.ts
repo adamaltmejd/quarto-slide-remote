@@ -44,7 +44,7 @@ function nextSlideTitle(reveal: RevealApi, h: number, v: number): string | undef
   return hNext ? slideTitle(hNext) : undefined;
 }
 
-export function extractState(reveal: RevealApi, roomId: string): SlideState {
+export function extractState(reveal: RevealApi, roomId: string, startedAt?: number): SlideState {
   const slide = reveal.getCurrentSlide();
   const idx = reveal.getIndices();
   return {
@@ -58,6 +58,7 @@ export function extractState(reveal: RevealApi, roomId: string): SlideState {
     nextTitle: nextSlideTitle(reveal, idx.h, idx.v),
     fragmentsLeft: fragmentsLeft(slide),
     isPaused: reveal.isPaused(),
+    startedAt,
     ts: Date.now(),
   };
 }

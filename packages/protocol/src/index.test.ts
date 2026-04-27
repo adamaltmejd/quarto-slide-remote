@@ -18,9 +18,15 @@ describe('protocol round-trip', () => {
       nextTitle: 'Next',
       fragmentsLeft: 2,
       isPaused: false,
+      startedAt: 1700000000000,
       ts: 1700000001234,
     };
     expect(roundtrip(state)).toEqual(state);
+  });
+
+  test('Command union includes resetTimer', () => {
+    const msg: ClientMessage = { t: 'cmd', cmd: 'resetTimer' };
+    expect(roundtrip(msg)).toEqual(msg);
   });
 
   test('ClientMessage state', () => {

@@ -165,4 +165,11 @@ describe('extractState — fragments and indices', () => {
     const reveal = makeReveal({ current: slide, paused: true });
     expect(extractState(reveal, 'r').isPaused).toBe(true);
   });
+
+  test('startedAt is forwarded onto the snapshot', () => {
+    const slide = makeSlide(`<section><h2>t</h2></section>`);
+    const reveal = makeReveal({ current: slide });
+    expect(extractState(reveal, 'r').startedAt).toBeUndefined();
+    expect(extractState(reveal, 'r', 1700000000000).startedAt).toBe(1700000000000);
+  });
 });

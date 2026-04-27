@@ -21,6 +21,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added — phone speaker companion polish
 
+- **Elapsed timer** in the phone top bar. The deck plugin starts a clock
+  on first user navigation (Reveal `slidechanged`), ships it as
+  `startedAt` in every snapshot, and the phone formats it `mm:ss`.
+  Tap-to-reset sends a new `cmd: 'resetTimer'` which the deck applies
+  and re-broadcasts, so multiple paired phones agree on the value
+  without each maintaining its own clock.
+- **Re-pair affordance** (small ↻ button at the right of the top bar).
+  Stops the WebSocket, releases the wake lock, clears the stored
+  session token, and replaces the body with "scan a fresh QR". Builds
+  on the already-exported `clearSession()`.
+- **Connection toast.** Transient banner above the title surfaces the
+  `reconnecting…`, `reconnected`, and `failed` transitions louder than
+  the colored status dot. Auto-dismisses after 2.5 s for transients;
+  sticks for `failed` so the presenter doesn't miss the terminal state.
+- **PWA polish.** App icon (vector — `pwa/icon.svg`) wired through
+  `apple-touch-icon`, `<link rel=icon>`, and the manifest icons array
+  with `purpose: any` and `purpose: maskable`. Manifest gains
+  `description`, `orientation: portrait`, and `scope`. iOS 16+ accepts
+  SVG apple-touch-icons; older iOS falls back to a generic Safari icon
+  (acceptable for v0.x).
 - **Phone UI layout overhaul.** Dominant full-width NEXT button with PREV
   and PAUSE sharing a 50/50 row beneath it. Stronger title hierarchy
   (current slide bold and full-color, next-slide title prefixed `Next:`
@@ -45,13 +65,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the screen to sleep mid-talk and dropping the WebSocket. Lives in
   `packages/phone-ui/src/wake-lock.ts`.
 
+### Protocol
+
+- **`Command` union extended with `'resetTimer'`** — viewer→presenter
+  message that resets the deck's `startedAt` and triggers a fresh
+  snapshot.
+- **`SlideState.startedAt?: number`** — epoch ms of the deck's first
+  navigation. Undefined until the presenter advances at least once.
+
 ### Tooling
 
-- `bun test` is now **76 tests across 9 files** (was 65 across 7). New
-  suites: `render.test.ts` covers the new layout, PAUSE↔isPaused
-  reflection, next-row hide-when-empty, and notes-size persistence;
-  `wake-lock.test.ts` covers acquire/release/error paths with a fake
-  `navigator.wakeLock`.
+- `bun test` is now **84 tests across 9 files** (was 65 across 7). New
+  suites: `render.test.ts` covers the layout, PAUSE↔isPaused reflection,
+  next-row hide-when-empty, notes-size persistence, the elapsed timer,
+  the re-pair flow, and the connection toast; `wake-lock.test.ts`
+  covers acquire/release/error paths with a fake `navigator.wakeLock`.
+  `extract.test.ts` and the protocol round-trip suite cover the new
+  `startedAt` field and `resetTimer` command.
 
 ## [0.1.1] — 2026-04-27
 

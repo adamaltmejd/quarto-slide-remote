@@ -88,7 +88,8 @@ body {
   gap: 4px;
   margin-left: 4px;
 }
-.sr__size-btn {
+.sr__size-btn,
+.sr__repair {
   appearance: none;
   border: 1px solid #2a2a2a;
   background: #181818;
@@ -102,12 +103,51 @@ body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.sr__size-btn:active {
+.sr__size-btn:active,
+.sr__repair:active {
   background: #222;
 }
 .sr__size-btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+.sr__repair {
+  margin-left: 4px;
+  font-size: 14px;
+  line-height: 1;
+  /* Quietly de-emphasized — discoverable without ever competing for attention. */
+  opacity: 0.5;
+}
+.sr__repair:hover,
+.sr__repair:focus-visible {
+  opacity: 1;
+}
+
+.sr__timer {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c8c8c8;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
+  font-size: 12px;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.sr__timer:active {
+  background: #1a1a1a;
+}
+.sr__timer:disabled {
+  cursor: default;
+  color: #6a6a6a;
 }
 
 /* ─── title block ──────────────────────────────────────────────────────── */
@@ -214,6 +254,42 @@ body {
   padding: 8px 12px;
   font-size: 13px;
   flex-shrink: 0;
+}
+
+.sr__toast {
+  flex-shrink: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: 0.01em;
+  animation: sr-toast-in 180ms ease;
+}
+.sr__toast[data-tone="good"] {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.sr__toast[data-tone="warn"] {
+  background: rgba(250, 204, 21, 0.14);
+  color: #fde68a;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+}
+.sr__toast[data-tone="bad"] {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+@keyframes sr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ─── controls ─────────────────────────────────────────────────────────── */
