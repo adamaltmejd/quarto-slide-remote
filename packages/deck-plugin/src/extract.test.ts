@@ -63,6 +63,18 @@ describe('extractState — title fallback', () => {
     const reveal = makeReveal({ current: slide });
     expect(extractState(reveal, 'r').title).toBe('direct');
   });
+
+  test('h1 wins over h2 even when h2 comes first in DOM order', () => {
+    const slide = makeSlide(`<section><h2>second</h2><h1>first</h1></section>`);
+    const reveal = makeReveal({ current: slide });
+    expect(extractState(reveal, 'r').title).toBe('first');
+  });
+
+  test('skips empty headings to fall through to next level', () => {
+    const slide = makeSlide(`<section><h1>   </h1><h2>real</h2></section>`);
+    const reveal = makeReveal({ current: slide });
+    expect(extractState(reveal, 'r').title).toBe('real');
+  });
 });
 
 describe('extractState — notes', () => {

@@ -9,9 +9,12 @@ const MAX_NOTES_BYTES = 64 * 1024;
 
 function slideTitle(slide: HTMLElement | undefined): string | undefined {
   if (!slide) return undefined;
-  const heading = slide.querySelector(':scope > h1, :scope > h2, :scope > h3');
-  const text = heading?.textContent?.trim();
-  if (text) return text;
+  // Prefer h1, then h2, then h3 — strict by level, not DOM order. A
+  // comma-selector would return whichever appeared first in the document.
+  for (const tag of ['h1', 'h2', 'h3'] as const) {
+    const text = slide.querySelector(`:scope > ${tag}`)?.textContent?.trim();
+    if (text) return text;
+  }
   const named = slide.getAttribute('data-name');
   return named?.trim() || undefined;
 }
