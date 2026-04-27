@@ -7,7 +7,12 @@
 //   bun run demo                # builds, watches, serves, opens browser
 //   bun run demo -- --no-open   # don't auto-open the browser
 //   bun run demo -- --no-watch  # build once and exit watch mode
+//
+// The deck-plugin watch builds into demo/.cache/ (gitignored) instead of the
+// canonical `_extensions/slide-remote/`, so a long-running `bun run demo`
+// session never clobbers the committed minified bundle.
 
+import { mkdir } from 'node:fs/promises';
 import { networkInterfaces, platform } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +20,9 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const demoDir = resolve(repoRoot, 'demo');
-const pluginBundle = resolve(repoRoot, '_extensions', 'slide-remote', 'slide-remote.js');
+const cacheDir = resolve(demoDir, '.cache');
+const pluginBundle = resolve(cacheDir, 'slide-remote.js');
+// CSS is checked in (no build step), so we serve it directly.
 const pluginCss = resolve(repoRoot, '_extensions', 'slide-remote', 'slide-remote.css');
 
 const noOpen = process.argv.includes('--no-open');
@@ -33,21 +40,31 @@ function lanIp(): string {
   return '127.0.0.1';
 }
 
-async function buildOnce(label: string, args: string[]): Promise<void> {
+async function buildOnce(
+  label: string,
+  args: string[],
+  env?: Record<string, string>,
+): Promise<void> {
   const proc = Bun.spawn(['bun', ...args], {
     cwd: repoRoot,
     stdout: 'inherit',
     stderr: 'inherit',
+    env: env ? { ...process.env, ...env } : process.env,
   });
   const code = await proc.exited;
   if (code !== 0) throw new Error(`[demo] ${label} build failed (exit ${code})`);
 }
 
-function spawnWatch(label: string, args: string[]): ReturnType<typeof Bun.spawn> {
+function spawnWatch(
+  label: string,
+  args: string[],
+  env?: Record<string, string>,
+): ReturnType<typeof Bun.spawn> {
   const proc = Bun.spawn(['bun', ...args], {
     cwd: repoRoot,
     stdout: 'inherit',
     stderr: 'inherit',
+    env: env ? { ...process.env, ...env } : process.env,
   });
   void proc.exited.then((code) => {
     if (code !== 0) console.error(`[demo] ${label} watch exited ${code}`);
@@ -80,16 +97,22 @@ function openBrowser(url: string): void {
 }
 
 // ── 1. Initial builds ─────────────────────────────────────────────────────
+//
+// SLIDE_REMOTE_PLUGIN_OUT redirects deck-plugin output into demo/.cache/
+// (gitignored) so the demo never dirties the committed minified bundle in
+// `_extensions/slide-remote/`.
 console.log('[demo] building plugin + phone UI…');
+await mkdir(cacheDir, { recursive: true });
+const pluginEnv = { SLIDE_REMOTE_PLUGIN_OUT: pluginBundle };
 await Promise.all([
-  buildOnce('plugin', ['packages/deck-plugin/build.ts']),
+  buildOnce('plugin', ['packages/deck-plugin/build.ts'], pluginEnv),
   buildOnce('phone-ui', ['packages/phone-ui/build.ts']),
 ]);
 
 // ── 2. Watchers (rebuild on src changes) ──────────────────────────────────
 const children: ReturnType<typeof Bun.spawn>[] = [];
 if (!noWatch) {
-  children.push(spawnWatch('plugin', ['packages/deck-plugin/build.ts', '--watch']));
+  children.push(spawnWatch('plugin', ['packages/deck-plugin/build.ts', '--watch'], pluginEnv));
   children.push(spawnWatch('phone-ui', ['packages/phone-ui/build.ts', '--watch']));
 }
 
