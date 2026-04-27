@@ -29,14 +29,14 @@ alone — pick one off the list.
 
 ### Suggested order
 
-The phone UI layout overhaul and the black-screen toggle naturally pair
-(the new layout's PAUSE button *is* the black-screen toggle). Wake lock
-is a one-liner with outsized value for iOS road-tests. After those three,
-the rest is order-agnostic.
+The phone UI layout overhaul, the black-screen toggle, and the wake lock
+shipped together (the new layout's PAUSE button *is* the black-screen
+toggle, and wake lock is a one-liner with outsized value for iOS).
+Remaining items are order-agnostic.
 
-1. Phone UI layout overhaul (below)
-2. Black-screen toggle — wire the PAUSE button to `cmd: 'black'`
-3. Wake lock — `navigator.wakeLock.request('screen')` while paired
+1. ~~Phone UI layout overhaul (below)~~ — shipped Unreleased
+2. ~~Black-screen toggle — wire the PAUSE button to `cmd: 'black'`~~ — shipped Unreleased
+3. ~~Wake lock — `navigator.wakeLock.request('screen')` while paired~~ — shipped Unreleased
 4. Re-pair affordance — surface the already-exported `clearSession()`
 5. Elapsed timer
 6. Connection toast
@@ -65,17 +65,17 @@ fast-tapping. Target shape:
 └──────────────────┴─────────────────┘
 ```
 
-- [ ] **Bigger NEXT button**: full-width, the dominant target on screen — visibly larger than the PREV/PAUSE row. Final size is a tuning question; pick by feel on a real phone, balancing thumb reach against notes-area room. Haptic-friendly.
-- [ ] **PREV + PAUSE share a row** below NEXT, each taking half-width. PAUSE is the black-screen toggle (`cmd: 'black'`).
-- [ ] **Disable double-tap-zoom**: add `touch-action: manipulation` on the action buttons (and probably the controls row) so rapid NEXT-tapping never accidentally pinch-zooms the phone UI. Avoid `user-scalable=no` on the viewport meta — that hurts accessibility.
-- [ ] **Stronger title hierarchy**: current slide title visually dominant (larger weight, full-color); next-slide title appears immediately under it, clearly secondary (smaller, dimmer, prefixed e.g. "Next:"). Both legible at arm's length, but unmistakably differentiated. Tighten existing notes-area styling to give the title block more presence.
-- [ ] **Notes box overflow and text size**: with controls taking a chunk of the viewport, the notes panel must be independently scrollable (not the whole body), with momentum scroll and visible scroll affordance. Set a sensible default text size for arm's-length reading; offer +/− controls (or pinch-on-the-notes-area only) to adjust, persisted in localStorage. v0.1.1 already wraps long unbroken tokens and gives `<pre>` horizontal overflow — build on that, don't redo it.
+- [x] **Bigger NEXT button**: full-width, the dominant target on screen — 96 px tall, blue, visibly larger than the 60 px PREV/PAUSE row.
+- [x] **PREV + PAUSE share a row** below NEXT, each taking half-width. PAUSE sends `cmd: 'black'`.
+- [x] **Disable double-tap-zoom**: `touch-action: manipulation` on every action and size button. Viewport meta still allows pinch-zoom for accessibility.
+- [x] **Stronger title hierarchy**: current slide bold and full-color; next-slide row prefixed `Next:` and dimmed. Hides when there's no next slide.
+- [x] **Notes box overflow and text size**: notes pane is the only scrollable region (the body is locked to `100dvh` and `overflow: hidden`). +/− controls in the top bar drive a five-step CSS scale, persisted in `localStorage` under `slide-remote.notes-size`.
 
 ### Other polish
 
-- [ ] **Black-screen toggle**: phone PAUSE button → `cmd: 'black'` → `Reveal.togglePause()`. The protocol command and the deck-side dispatch are already wired (`applyRemoteCommand` in `deck-plugin/src/client.ts`); only the phone button is missing. Verify the deck's `.reveal.paused` style renders as actual black against `datascience-theme.scss`; add a self-scoped overlay rule if needed.
+- [x] **Black-screen toggle**: phone PAUSE button → `cmd: 'black'` → `Reveal.togglePause()`. Button reflects the deck's `isPaused` state from snapshots and flips to `RESUME` while paused.
 - [ ] **Elapsed timer**: starts on first navigation, `mm:ss`, tap to reset. Persisted across phone reconnect via `startedAt` in the snapshot so multiple viewers agree.
-- [ ] **Wake lock**: `navigator.wakeLock.request('screen')` while paired; release on visibility change. Critical for iOS Safari + Low Power Mode.
+- [x] **Wake lock**: `navigator.wakeLock.request('screen')` while connected; auto-released by browsers on tab hide; re-acquired on `visibilitychange` → `visible`. Silent no-op when the API is unavailable.
 - [ ] **PWA polish**: real apple-touch-icon, app icons in `manifest.webmanifest`, theme-color, dark/light splash.
 - [ ] **Re-pair affordance on phone**: a small "re-pair" link that calls `clearSession()` (already exported from `phone-ui/src/session.ts`) and shows a "scan a fresh QR" message.
 - [ ] **Connection toast**: a momentary banner on the phone when the deck disconnects/reconnects, instead of just a status dot. Especially useful to surface the new `'failed'` terminal state more loudly than the dot color.
@@ -84,6 +84,7 @@ fast-tapping. Target shape:
 
 ## Beyond v0.2
 
+- [ ] **Badge fade-and-flash transitions** (queued for ~v0.4). Today the badge is hidden while connected and visible (red/yellow) on disconnect/reconnecting/failed; transitions are instant. Add a green "paired" flash on first connect *and* every reconnect, holding for ~2.5 s then fading to invisible over ~600 ms. Disconnect/failed states stay sticky red. Pure CSS-transition + `setTimeout`; no protocol change. Position is already top-right (collides with neither reveal.js's bottom-right `slideNumber` nor a consumer's bottom-left status widgets).
 - [ ] **Jump-to-slide / overview**: phone shows the slide list (title + thumb-friendly tap targets); selecting one sends `cmd: 'goto'`. Useful when the talk goes off-script.
 - [ ] **Haptic feedback**: short tap when `cmd` is acknowledged (`navigator.vibrate` is iOS-limited; explore `expo-haptics`-style alternatives or accept Android-only).
 - [ ] **Token regeneration**: presenter shortcut (Shift+T?) to mint a new room mid-talk if a phone walked off with the old QR.
@@ -106,7 +107,6 @@ Tracked here so we don't forget; not in any priority order. Items resolved
 in v0.1.x are dropped — see CHANGELOG for closeouts.
 
 - **iOS Safari + Low Power Mode** drops WebSockets aggressively when the screen sleeps. The reconnect ceiling (`MAX_RECONNECT_ATTEMPTS = 60`) caps the spinner at ~15 minutes; wake lock + fast reconnect (both v0.2) help further, but the screen-off → screen-on cycle still needs explicit testing on a real device.
-- **`Reveal.togglePause()` styling** depends on `.reveal.paused`. Custom themes (e.g. `datascience-theme.scss`) may not render a true black; verify before relying on it for the v0.2 black-screen feature.
 - **DO SQLite + `new_sqlite_classes` migrations are one-way.** Pin compat date carefully and version any migration changes.
 - **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable for v0.1; revisit with token regeneration in Beyond.
 - **`/api/room/new` CORS** is currently `*` and unrate-limited. Fine for the current scale (the endpoint mints empty rooms; it's not abuse-worthy on its own), but constrain to the deck's origin and pair with idle DO cleanup before broader deployment.

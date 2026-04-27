@@ -30,6 +30,7 @@ export class Overlay {
   private statusEl: HTMLSpanElement;
   private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
+  private linkEl: HTMLAnchorElement;
 
   constructor(handlers: OverlayHandlers) {
     this.qrHost = el('div', 'sr-overlay__qr');
@@ -45,6 +46,12 @@ export class Overlay {
     const meta = el('div', 'sr-overlay__meta');
     meta.append(row('Room', this.codeEl), row('Status', this.statusEl), row('Phones', this.peerEl));
 
+    // Plain-text fallback for users without a phone camera, and a quick way
+    // to open the phone UI in a second browser window for a laptop-only test.
+    this.linkEl = el('a', 'sr-overlay__link', 'open on this device');
+    this.linkEl.target = '_blank';
+    this.linkEl.rel = 'noopener noreferrer';
+
     const panel = el('div', 'sr-overlay__panel');
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'true');
@@ -54,6 +61,7 @@ export class Overlay {
       el('h2', 'sr-overlay__title', 'Pair your phone'),
       this.qrHost,
       meta,
+      this.linkEl,
       el('p', 'sr-overlay__hint', 'Scan with your iPhone camera. Press Esc to dismiss.'),
     );
 
@@ -71,6 +79,7 @@ export class Overlay {
     this.qrHost.innerHTML = qrSvg(joinUrl, 256);
     this.qrHost.dataset.joinUrl = joinUrl;
     this.codeEl.textContent = roomId;
+    this.linkEl.href = joinUrl;
     if (!this.root.isConnected) document.body.appendChild(this.root);
   }
 

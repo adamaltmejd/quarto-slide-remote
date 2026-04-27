@@ -3,6 +3,7 @@
 
 import { buildUi } from './render';
 import { loadSession, saveSession } from './session';
+import { WakeLockManager } from './wake-lock';
 import { ViewerClient } from './ws';
 
 const STATUS_TEXT = {
@@ -51,12 +52,19 @@ if (tokenFromUrl) {
 const ui = buildUi({
   onPrev: () => client.send('prev'),
   onNext: () => client.send('next'),
+  onPause: () => client.send('black'),
 });
 document.body.replaceChildren(ui.root);
 ui.setRoom(roomId);
 
+const wakeLock = new WakeLockManager();
+
 const client = new ViewerClient(window.location.origin, roomId, token, {
-  onStatus: (state) => ui.setStatus(STATUS_TEXT[state], state),
+  onStatus: (state) => {
+    ui.setStatus(STATUS_TEXT[state], state);
+    if (state === 'connected') void wakeLock.acquire();
+    else if (state === 'failed') void wakeLock.release();
+  },
   onSnapshot: (msg) => ui.setState(msg.payload),
   onPeer: (presenter, viewer) => ui.setPeerCount(presenter, viewer),
   onError: (code, msg) => ui.showError(`${code}: ${msg}`),

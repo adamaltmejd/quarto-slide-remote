@@ -14,6 +14,7 @@
     "dev:phone": "bun packages/phone-ui/build.ts --watch",
     "dev:worker": "cd packages/worker && bunx wrangler dev",
     "dev:install": "bun scripts/dev-install.ts --watch",
+    "demo": "bun scripts/demo.ts",
     "deploy": "bun run build:plugin:min && bun run build:phone && cd packages/worker && bunx wrangler deploy",
     "typecheck": "tsc --noEmit -p packages/protocol && tsc --noEmit -p packages/deck-plugin && tsc --noEmit -p packages/phone-ui && tsc --noEmit -p packages/worker",
     "lint": "biome check .",

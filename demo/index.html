@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>slide-remote demo</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/black.css"
+    />
+    <link rel="stylesheet" href="/slide-remote.css" />
+    <script>
+      // Stand-in for filter.lua: derive worker URL from the current host so the
+      // demo works at 127.0.0.1, on the LAN, or via a tunnel without edits.
+      (() => {
+        const workerOrigin = `${location.protocol}//${location.hostname}:8787`;
+        const metas = [
+          ['slide-remote-worker-url', workerOrigin],
+          ['slide-remote-show-button', 'false'],
+          ['slide-remote-disable-on-params', ''],
+        ];
+        for (const [name, content] of metas) {
+          const m = document.createElement('meta');
+          m.name = name;
+          m.content = content;
+          document.head.appendChild(m);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h1>slide-remote demo</h1>
+          <p>Press <kbd>Shift</kbd>+<kbd>R</kbd> to summon the QR overlay.</p>
+          <p style="font-size: 0.7em; color: #888">
+            In the overlay, click <em>open on this device</em> to launch the
+            phone UI in a second browser window — no real phone needed.
+          </p>
+          <aside class="notes">
+            <p>Welcome notes. These appear on the paired phone, sanitized.</p>
+            <p>
+              Try advancing with the phone NEXT button — it should never miss,
+              even with rapid taps.
+            </p>
+          </aside>
+        </section>
+
+        <section>
+          <h2>Notes rendering</h2>
+          <p>Body content stays on the deck.</p>
+          <aside class="notes">
+            <p>The phone notes panel handles common HTML:</p>
+            <ul>
+              <li>Lists like this one</li>
+              <li>
+                Inline <code>code()</code> and a
+                <a href="https://example.com">link</a>
+              </li>
+            </ul>
+            <pre><code>function hello() {
+  return 'world';
+}</code></pre>
+            <p>
+              Long unbroken tokens wrap rather than overflow:
+              this/is/a/really/long/path/segment/that/should/not/cause/horizontal/scroll/of/the/whole/page.
+            </p>
+          </aside>
+        </section>
+
+        <section>
+          <h2>Fragments</h2>
+          <p>The phone shows how many fragments are still hidden.</p>
+          <ul>
+            <li class="fragment">First fragment</li>
+            <li class="fragment">Second fragment</li>
+            <li class="fragment">Third fragment</li>
+            <li class="fragment">Fourth fragment</li>
+          </ul>
+          <aside class="notes">
+            <p>
+              Each NEXT advances one fragment, then moves to the next slide on
+              the fifth tap. Watch the phone's slide counter only increment
+              when the fragment list is exhausted.
+            </p>
+          </aside>
+        </section>
+
+        <section>
+          <section>
+            <h2>Vertical stack: top</h2>
+            <aside class="notes">
+              <p>This is a horizontal slide with verticals beneath it.</p>
+            </aside>
+          </section>
+          <section>
+            <h2>Vertical stack: middle</h2>
+            <aside class="notes">
+              <p>The phone's <em>Next:</em> hint should preview the next vertical slide.</p>
+            </aside>
+          </section>
+          <section>
+            <h2>Vertical stack: bottom</h2>
+            <aside class="notes">
+              <p>From here, NEXT moves to the next horizontal stack.</p>
+            </aside>
+          </section>
+        </section>
+
+        <section data-name="No-notes slide">
+          <h2>No notes here</h2>
+          <p>The phone falls back to "No notes for this slide."</p>
+        </section>
+
+        <section>
+          <h1>Try PAUSE</h1>
+          <p>Tapping PAUSE on the phone toggles the deck's black-screen.</p>
+          <aside class="notes">
+            <p>The button label flips to <strong>RESUME</strong> while paused.</p>
+          </aside>
+        </section>
+      </div>
+    </div>
+
+    <script type="module">
+      import Reveal from 'https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.esm.js';
+      import '/slide-remote.js';
+
+      const deck = new Reveal({
+        hash: true,
+        slideNumber: 'c/t',
+        plugins: [window.SlideRemote()],
+      });
+      deck.initialize();
+    </script>
+  </body>
+</html>
