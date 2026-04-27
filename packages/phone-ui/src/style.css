@@ -50,7 +50,8 @@ body {
   background: #facc15;
 }
 .sr__dot[data-state="disconnected"],
-.sr__dot[data-state="error"] {
+.sr__dot[data-state="error"],
+.sr__dot[data-state="failed"] {
   background: #f87171;
 }
 .sr__status {
@@ -106,6 +107,9 @@ body {
   font-size: 17px;
   line-height: 1.5;
   color: #d4d4d4;
+  /* Long unbroken tokens (URLs, identifiers) wrap instead of overflowing. */
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .sr__notes code {
   background: #1a1a1a;
@@ -118,6 +122,12 @@ body {
     Menlo,
     monospace;
 }
+.sr__notes pre {
+  /* Code blocks scroll horizontally inside the notes panel rather than
+     pushing the viewport wider than the screen. */
+  overflow-x: auto;
+  max-width: 100%;
+}
 .sr__notes ul,
 .sr__notes ol {
   padding-left: 1.4em;
@@ -128,6 +138,10 @@ body {
 }
 .sr__notes a {
   color: #93c5fd;
+}
+.sr__notes img {
+  max-width: 100%;
+  height: auto;
 }
 
 .sr__error {

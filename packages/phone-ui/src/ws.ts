@@ -4,9 +4,20 @@
 import type { ClientMessage, Command, ServerMessage } from '@slide-remote/protocol';
 
 const BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
+// Roughly 15 minutes of trying once the cap (15s) is hit. After that the
+// phone shows 'failed' instead of spinning indefinitely.
+const MAX_RECONNECT_ATTEMPTS = 60;
+
+export type ViewerStatus =
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'failed'
+  | 'error';
 
 export interface ClientHandlers {
-  onStatus(text: 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error'): void;
+  onStatus(text: ViewerStatus): void;
   onSnapshot(msg: Extract<ServerMessage, { t: 'state_snapshot' }>): void;
   onPeer(presenter: number, viewer: number): void;
   onError(code: string, msg: string): void;
@@ -99,6 +110,14 @@ export class ViewerClient {
 
   private scheduleReconnect(): void {
     if (this.closed) return;
+    if (this.attempt >= MAX_RECONNECT_ATTEMPTS) {
+      this.handlers.onStatus('failed');
+      this.handlers.onError(
+        'giveup',
+        `giving up after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`,
+      );
+      return;
+    }
     const idx = Math.min(this.attempt, BACKOFF_MS.length - 1);
     const delay = BACKOFF_MS[idx] ?? 15000;
     this.attempt++;

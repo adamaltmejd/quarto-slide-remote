@@ -1,8 +1,9 @@
 // Phone UI rendering — plain DOM, no framework.
 
 import type { SlideState } from '@slide-remote/protocol';
+import type { ViewerStatus } from './ws';
 
-export type ViewerStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
+export type { ViewerStatus };
 
 export interface UI {
   root: HTMLElement;

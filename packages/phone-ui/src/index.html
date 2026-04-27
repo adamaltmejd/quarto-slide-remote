@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
+    <!--
+      Defense-in-depth for the notes innerHTML render path: notes are sanitized
+      deck-side before being shipped over the WS, but the phone re-renders raw
+      HTML. The CSP here neutralises script injection regardless of how the
+      content arrived. img-src is permissive because notes legitimately embed
+      remote images and inline data:image/ thumbnails (knitr).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https: http:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
     <title>slide-remote</title>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/pwa/manifest.webmanifest" />

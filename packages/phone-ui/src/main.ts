@@ -10,6 +10,7 @@ const STATUS_TEXT = {
   connected: 'paired',
   reconnecting: 'reconnecting…',
   disconnected: 'disconnected',
+  failed: 'failed',
   error: 'error',
 } as const;
 
