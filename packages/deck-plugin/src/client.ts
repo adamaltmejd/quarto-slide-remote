@@ -11,6 +11,9 @@ import { extractState } from './extract';
 import type { RevealApi } from './types';
 
 const RECONNECT_BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
+// Roughly 15 minutes of trying once the cap (15s) is hit. After that the
+// presenter sees 'failed' instead of an indefinitely-spinning badge.
+const MAX_RECONNECT_ATTEMPTS = 60;
 
 export type ClientStatus =
   | 'minting'
@@ -19,6 +22,27 @@ export type ClientStatus =
   | 'reconnecting'
   | 'disconnected'
   | 'failed';
+
+// Pure command dispatch. Exported so tests can exercise it without standing
+// up a WebSocket / fetch / mint flow.
+export function applyRemoteCommand(reveal: RevealApi, cmd: Command, args: unknown): void {
+  switch (cmd) {
+    case 'next':
+      reveal.next();
+      break;
+    case 'prev':
+      reveal.prev();
+      break;
+    case 'goto': {
+      const a = (args ?? {}) as { h?: number; v?: number; f?: number };
+      if (typeof a.h === 'number') reveal.slide(a.h, a.v ?? 0, a.f);
+      break;
+    }
+    case 'black':
+      reveal.togglePause();
+      break;
+  }
+}
 
 export interface ClientHandlers {
   onConnected(joinUrl: string, roomId: string): void;
@@ -100,6 +124,11 @@ export class Client {
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      this.handlers.onStatus('failed');
+      this.handlers.onError(`giving up after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`);
+      return;
+    }
     const idx = Math.min(this.reconnectAttempt, RECONNECT_BACKOFF_MS.length - 1);
     const delay = RECONNECT_BACKOFF_MS[idx] ?? 15000;
     this.reconnectAttempt++;
@@ -109,7 +138,7 @@ export class Client {
   private handleServerMessage(msg: ServerMessage): void {
     switch (msg.t) {
       case 'cmd':
-        this.applyCommand(msg.cmd, msg.args);
+        applyRemoteCommand(this.reveal, msg.cmd, msg.args);
         break;
       case 'peer':
         this.handlers.onPeerCount(msg.presenter, msg.viewer);
@@ -123,28 +152,10 @@ export class Client {
     }
   }
 
-  private applyCommand(cmd: Command, args: unknown): void {
-    switch (cmd) {
-      case 'next':
-        this.reveal.next();
-        break;
-      case 'prev':
-        this.reveal.prev();
-        break;
-      case 'goto': {
-        const a = (args ?? {}) as { h?: number; v?: number; f?: number };
-        if (typeof a.h === 'number') this.reveal.slide(a.h, a.v ?? 0, a.f);
-        break;
-      }
-      case 'black':
-        this.reveal.togglePause();
-        break;
-    }
-  }
-
   private attachRevealHooks(): void {
+    // 'ready' intentionally omitted: openSocket() pumps once on 'open',
+    // which already covers the initial state push.
     const events = [
-      'ready',
       'slidechanged',
       'fragmentshown',
       'fragmenthidden',
