@@ -34,7 +34,7 @@ quality and packaging items below.
   - [x] `sanitize.ts` — `<style>` leak regression, allowlist, `data:image/` only on `img.src`, `javascript:` blocked everywhere (20 tests)
   - [x] `extract.ts` — title fallback chain, 64 KB notes cap, next-slide title across vertical/horizontal stacks (13 tests)
   - [x] `protocol/index.ts` — JSON round-trip across SlideState / ClientMessage / ServerMessage (7 tests)
-- [x] `packages/worker/test/integration.test.ts` — boots `wrangler dev` itself; gated by `SR_INTEGRATION=1` so default `bun test` stays fast
+- [x] `packages/worker/test/integration.test.ts` — boots `wrangler dev` itself; gated by `SR_INTEGRATION=1` so default `bun test` stays fast. Six cases covering room mint, presenter↔viewer round-trip, viewer→presenter `cmd` forwarding, role enforcement, late-viewer snapshot replay, and a raw-TCP `probeUpgradeStatus()` for 401/101 auth checks (sidesteps bun#11706 / bun#5951)
 - [x] Pre-commit hook via `git config core.hooksPath .githooks` (`bun run hooks:install`); `.githooks/pre-commit` runs lint + typecheck + tests
 - [x] GitHub Actions CI (`.github/workflows/ci.yml`): three jobs — `unit` (lint → typecheck → bun test → build → size), `integration` (`bun run test:smoke`), `decktape-silent` (assert no socket / DOM / console writes under `?handout=true`)
 - [x] Bundle-size budget at 30 KB gzip enforced by `scripts/size-check.ts` (current minified bundle: 30 KB raw / **11.4 KB gzip**)
