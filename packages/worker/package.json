@@ -1,0 +1,12 @@
+{
+  "name": "@slide-remote/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@slide-remote/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260420.1"
+  }
+}
