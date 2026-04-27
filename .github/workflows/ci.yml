@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: lint · typecheck · unit tests · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Lint (biome)
+        run: bun run lint
+
+      - name: Typecheck (tsc --noEmit, all workspaces)
+        run: bun run typecheck
+
+      - name: Unit tests (bun test)
+        run: bun test
+
+      - name: Build deck plugin (minified)
+        run: bun run build:plugin:min
+
+      - name: Build phone UI
+        run: bun run build:phone
+
+      - name: Bundle-size budget
+        run: bun run size
+
+  integration:
+    name: integration (wrangler dev + WS round-trip)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Smoke test (boots wrangler dev)
+        run: bun run test:smoke
+
+  decktape-silent:
+    name: deck plugin silent during decktape render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build plugin
+        run: bun run build:plugin
+
+      - name: Decktape-silent assertion
+        run: bun scripts/check-decktape-silent.ts

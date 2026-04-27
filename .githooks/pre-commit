@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Pre-commit gate for quarto-slide-remote. Run once after clone:
+#   bun run hooks:install
+# (sets git config core.hooksPath to .githooks)
+
+set -e
+
+echo "[pre-commit] biome check"
+bun run lint
+
+echo "[pre-commit] tsc --noEmit"
+bun run typecheck
+
+echo "[pre-commit] bun test"
+bun test
