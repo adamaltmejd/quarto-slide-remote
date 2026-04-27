@@ -4,9 +4,9 @@ Working toward a stable, publishable v0.1 release. Items above the current
 working state are stable and shipped; items below describe what's still open.
 
 Current state: **v0.1.0-rc** — MVP works end-to-end against a deployed Worker;
-quality + tooling (lint/format, unit tests, integration test, pre-commit hook,
-CI workflow, size budget, decktape-silent assertion) are wired up. Remaining
-work before tagging v0.1.0 is documentation and release packaging.
+quality + tooling and documentation are in place. Remaining work before
+tagging v0.1.0 is the GitHub push, the annotated tag, and switching the
+EC7422 consumer over to the published `quarto add`.
 
 ---
 
@@ -41,12 +41,11 @@ quality and packaging items below.
 - [x] Minified release build via `bun run build:plugin:min`; `bun run deploy` uses it before `wrangler deploy`
 - [x] Decktape-silent assertion via `scripts/check-decktape-silent.ts` (happy-dom env, eval'd IIFE, asserts wsCount == 0, no body mutations, no keydown listener, no console writes)
 
-### Documentation and packaging — open
+### Documentation and packaging
 
-- [ ] LICENSE file (MIT)
-- [ ] CHANGELOG.md
-- [ ] Expand README: consumer install steps, YAML config table, troubleshooting, theme-independence note
-- [ ] Document the road-test flow (start `wrangler dev`/`deploy`, render deck, scan QR)
+- [x] LICENSE file (MIT)
+- [x] CHANGELOG.md (Keep-a-Changelog style; v0.1.0 entry)
+- [x] Expanded README: install steps, YAML config table, road-test flow, troubleshooting, theme-independence note, project layout, CI badge
 - [ ] Push the repo to GitHub (`adamaltmejd/quarto-slide-remote`)
 - [ ] Tag `v0.1.0` and verify `quarto add adamaltmejd/quarto-slide-remote@v0.1.0` resolves cleanly in a fresh consumer
 - [ ] Switch the EC7422 course repo from dev-install to `quarto add` once the tag is live; remove the gitignore line
