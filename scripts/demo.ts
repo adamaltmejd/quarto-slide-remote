@@ -151,12 +151,45 @@ console.log('');
 if (!noOpen) openBrowser(localUrl);
 
 // ── 6. Cleanup ────────────────────────────────────────────────────────────
-const shutdown = (): void => {
-  for (const c of children) c.kill('SIGINT');
-  server.stop();
-  process.exit(0);
+//
+// Children (wrangler dev + plugin watch + phone-ui watch) don't reliably die
+// when the parent does. macOS doesn't ship a `PR_SET_PDEATHSIG` equivalent we
+// can wire to, so we belt-and-suspenders: handle every signal the parent is
+// likely to receive, plus uncaught errors, plus the synchronous `'exit'`
+// callback as a last resort. SIGKILL on the parent still leaves orphans —
+// nothing portable rescues that case.
+let shuttingDown = false;
+const killChildren = (signal: NodeJS.Signals = 'SIGINT'): void => {
+  for (const c of children) {
+    try {
+      c.kill(signal);
+    } catch {
+      // already dead
+    }
+  }
 };
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+const shutdown = (code = 0): void => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  killChildren('SIGINT');
+  server.stop();
+  process.exit(code);
+};
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGQUIT'] as const) {
+  process.on(sig, () => shutdown(0));
+}
+process.on('uncaughtException', (e) => {
+  console.error('[demo] uncaught:', e);
+  shutdown(1);
+});
+process.on('unhandledRejection', (e) => {
+  console.error('[demo] unhandled rejection:', e);
+  shutdown(1);
+});
+// 'exit' fires synchronously after `process.exit()` and after the event loop
+// drains. Final synchronous SIGKILL ensures no child outlives us when the
+// graceful shutdown above didn't run (e.g. main `await` rejected silently).
+process.on('exit', () => killChildren('SIGKILL'));
+
 // Keep the event loop alive until SIGINT.
 await new Promise(() => {});

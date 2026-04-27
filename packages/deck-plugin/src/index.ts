@@ -89,8 +89,16 @@ function plugin(): RevealPlugin {
           !e.altKey &&
           (e.key === 'R' || e.key === 'r')
         ) {
-          const target = e.target as HTMLElement | null;
-          if (target?.matches('input, textarea, [contenteditable="true"]')) return;
+          // Skip while the user is typing into an editable element. `e.target`
+          // is `EventTarget`, which can be `Document` (no `.matches`); guard
+          // with `instanceof Element` rather than blindly casting.
+          const target = e.target;
+          if (
+            target instanceof Element &&
+            target.matches('input, textarea, [contenteditable="true"]')
+          ) {
+            return;
+          }
           e.preventDefault();
           controller.activate();
         }
