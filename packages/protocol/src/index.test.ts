@@ -18,7 +18,6 @@ describe('protocol round-trip', () => {
       nextTitle: 'Next',
       fragmentsLeft: 2,
       isPaused: false,
-      startedAt: 1700000000000,
       ts: 1700000001234,
     };
     expect(roundtrip(state)).toEqual(state);

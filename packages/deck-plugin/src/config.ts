@@ -28,7 +28,6 @@ export function shouldDisable(cfg: PluginConfig): boolean {
   for (const p of cfg.disableOnParams) {
     if (params.has(p)) return true;
   }
-  if (meta('slide-remote-enabled') === 'false') return true;
   if (navigator.webdriver) return true;
   return false;
 }

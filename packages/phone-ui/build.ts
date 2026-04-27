@@ -1,4 +1,4 @@
-// Builds phone UI into packages/worker/assets/. Phase 0 stub: copies html/css and bundles main.ts.
+// Builds phone UI into packages/worker/assets/. Bundles main.ts and copies html/css.
 //
 // Usage:
 //   bun packages/phone-ui/build.ts

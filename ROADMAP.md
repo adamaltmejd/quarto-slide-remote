@@ -22,7 +22,7 @@ quality and packaging items below.
 - [x] Deck plugin: silent by default; `?remote=1` / `Shift+R` activation; QR pairing overlay; corner status badge; WS client with reconnect/backoff
 - [x] State extraction: title, indices, notes (allowlist-sanitized), next-slide title, fragments-left
 - [x] Phone UI: viewer client, layout, prev/next, reconnect, localStorage session, hash-token capture and stripping
-- [x] One end-to-end smoke test (`scripts/ws-smoke.ts`)
+- [x] End-to-end smoke test (`packages/worker/test/integration.test.ts`, gated by `SR_INTEGRATION=1`)
 - [x] Theme-independence: plugin uses only Reveal's public API and standard DOM contract; CSS scoped under `.sr-*`
 - [x] Worker deployed (`slide-remote.adamaltmejd.workers.dev`) and consumer wired in EC7422 lectures
 - [x] Notes sanitizer drops dangerous container tags (`<style>`, `<script>`, `<svg>`, `<math>`, …)
@@ -106,6 +106,11 @@ fast-tapping. Target shape:
 - [ ] **Apple Watch companion**: explicit non-goal for v0.x; revisit if the phone-as-clicker UX has friction in real talks.
 - [ ] **Telemetry**: minimal counters (rooms minted, commands sent, errors) so we can see real-world usage without storing presentation content.
 - [ ] **Idle DO cleanup**: alarm-driven 24h TTL is sketched but not wired in `RoomDO`; add it when usage justifies the cost discipline.
+
+### Plugin performance
+
+- [ ] **Lazy-load the QR library** in `packages/deck-plugin`. `qrcode-generator` (~50 KB raw, the bulk of the bundle) only runs when a presenter opens the pairing overlay, but it currently parses on every deck load. Move it behind a dynamic `import()` inside `Overlay.open()` (or the controller's `activate()` path) so the 99% non-paired case pays nothing. Coordinate with the size-check budget — the main bundle drops, the QR chunk loads on demand.
+- [ ] **Cache sanitized notes per slide.** `sanitizeNotesHtml` runs on every `pumpStateNow`, including `fragmentshown`/`fragmenthidden` events on a slide whose notes haven't changed. Add a `WeakMap<Element, string>` keyed by the slide element so notes are sanitized once per slide. Invalidate naturally when the deck re-renders (WeakMap drops detached nodes). Worth the change for note-heavy decks where sanitization shows up in the flush-state hot path.
 
 ---
 

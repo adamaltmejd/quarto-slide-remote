@@ -152,3 +152,7 @@
 .sr-trigger:hover {
   opacity: 1;
 }
+/* Hide the launcher once the paired badge takes its corner. */
+body:has(.sr-badge) .sr-trigger {
+  display: none;
+}

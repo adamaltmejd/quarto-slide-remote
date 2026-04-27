@@ -4,7 +4,7 @@
 
 export type Role = 'presenter' | 'viewer';
 
-export type Command = 'next' | 'prev' | 'goto' | 'black' | 'reset-timer';
+export type Command = 'next' | 'prev' | 'goto' | 'black';
 
 export interface SlideState {
   roomId: string;
@@ -17,7 +17,6 @@ export interface SlideState {
   nextTitle?: string;
   fragmentsLeft?: number;
   isPaused?: boolean;
-  startedAt?: number;
   ts: number;
 }
 

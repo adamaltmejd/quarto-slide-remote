@@ -5,6 +5,14 @@ import { buildUi } from './render';
 import { loadSession, saveSession } from './session';
 import { ViewerClient } from './ws';
 
+const STATUS_TEXT = {
+  connecting: 'connecting…',
+  connected: 'paired',
+  reconnecting: 'reconnecting…',
+  disconnected: 'disconnected',
+  error: 'error',
+} as const;
+
 function parseRoomId(): string | null {
   const m = /^\/r\/([^/]+)/.exec(window.location.pathname);
   return m?.[1] ?? null;
@@ -13,8 +21,7 @@ function parseRoomId(): string | null {
 function parseToken(): string | null {
   const hash = window.location.hash.replace(/^#/, '');
   if (!hash) return null;
-  const params = new URLSearchParams(hash);
-  return params.get('t');
+  return new URLSearchParams(hash).get('t');
 }
 
 function fatal(text: string): void {
@@ -27,20 +34,16 @@ if (!roomId) {
   throw new Error('no room id');
 }
 
-let token = parseToken();
-if (!token) {
-  const stored = loadSession(roomId);
-  if (stored) token = stored.token;
-}
+const tokenFromUrl = parseToken();
+const token = tokenFromUrl ?? loadSession(roomId)?.token ?? null;
 if (!token) {
   fatal('Missing pairing token. Re-scan the QR code from the deck.');
   throw new Error('no token');
 }
 
-saveSession({ roomId, token, lastSeen: Date.now() });
-
-// Hide the token from browser history once we've captured it.
-if (window.location.hash) {
+if (tokenFromUrl) {
+  saveSession({ roomId, token });
+  // Hide the token from browser history once we've captured it.
   history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 
@@ -52,23 +55,10 @@ document.body.replaceChildren(ui.root);
 ui.setRoom(roomId);
 
 const client = new ViewerClient(window.location.origin, roomId, token, {
-  onStatus: (state) => {
-    const text = {
-      connecting: 'connecting…',
-      connected: 'paired',
-      reconnecting: 'reconnecting…',
-      disconnected: 'disconnected',
-      error: 'error',
-    }[state];
-    ui.setStatus(text, state);
-  },
-  onSnapshot: (msg) => {
-    ui.setState(msg.payload);
-  },
+  onStatus: (state) => ui.setStatus(STATUS_TEXT[state], state),
+  onSnapshot: (msg) => ui.setState(msg.payload),
   onPeer: (presenter, viewer) => ui.setPeerCount(presenter, viewer),
-  onError: (code, msg) => {
-    ui.showError(`${code}: ${msg}`);
-  },
+  onError: (code, msg) => ui.showError(`${code}: ${msg}`),
 });
 
 client.start();

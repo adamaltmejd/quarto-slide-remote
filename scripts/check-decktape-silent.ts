@@ -77,18 +77,15 @@ document.addEventListener = ((
 // Stub Reveal: only the methods init() touches.
 const reveal = {
   on: () => {},
-  off: () => {},
   next: () => {},
   prev: () => {},
   slide: () => {},
   togglePause: () => {},
   isPaused: () => false,
-  isOverview: () => false,
   getCurrentSlide: () => undefined,
   getSlide: () => undefined,
   getIndices: () => ({ h: 0, v: 0 }),
   getTotalSlides: () => 0,
-  addKeyBinding: () => {},
 };
 
 // Evaluate the IIFE in the global scope. Aliasing eval to a local binding

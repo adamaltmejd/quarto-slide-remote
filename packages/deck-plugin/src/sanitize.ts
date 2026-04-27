@@ -89,9 +89,10 @@ function sanitizeNode(node: Node, out: Document): Node | null {
   return created;
 }
 
+const parser = new DOMParser();
+
 export function sanitizeNotesHtml(raw: string): string {
   if (!raw) return '';
-  const parser = new DOMParser();
   const doc = parser.parseFromString(`<div>${raw}</div>`, 'text/html');
   const root = doc.body.firstElementChild;
   if (!root) return '';

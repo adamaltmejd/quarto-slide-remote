@@ -12,9 +12,17 @@ import type { RevealApi } from './types';
 
 const RECONNECT_BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
 
+export type ClientStatus =
+  | 'minting'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'failed';
+
 export interface ClientHandlers {
   onConnected(joinUrl: string, roomId: string): void;
-  onStatus(text: string): void;
+  onStatus(status: ClientStatus): void;
   onPeerCount(presenter: number, viewer: number): void;
   onError(msg: string): void;
 }
@@ -23,8 +31,6 @@ export class Client {
   private ws?: WebSocket;
   private room?: RoomCreateResponse;
   private reconnectAttempt = 0;
-  private reconnectTimer?: ReturnType<typeof setTimeout>;
-  private closed = false;
   private flushTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
@@ -33,8 +39,12 @@ export class Client {
     private handlers: ClientHandlers,
   ) {}
 
+  getRoom(): RoomCreateResponse | undefined {
+    return this.room;
+  }
+
   async start(): Promise<void> {
-    this.handlers.onStatus('minting room…');
+    this.handlers.onStatus('minting');
     try {
       const res = await fetch(new URL('/api/room/new', this.workerUrl).toString(), {
         method: 'POST',
@@ -51,13 +61,6 @@ export class Client {
     this.attachRevealHooks();
   }
 
-  stop(): void {
-    this.closed = true;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    if (this.flushTimer) clearTimeout(this.flushTimer);
-    this.ws?.close();
-  }
-
   private openSocket(): void {
     if (!this.room) return;
     const url = new URL('/api/ws', this.workerUrl);
@@ -66,7 +69,7 @@ export class Client {
     url.searchParams.set('role', 'presenter');
     url.searchParams.set('token', this.room.presenterToken);
 
-    this.handlers.onStatus(this.reconnectAttempt === 0 ? 'connecting…' : 'reconnecting…');
+    this.handlers.onStatus(this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
     const ws = new WebSocket(url.toString());
     this.ws = ws;
 
@@ -78,16 +81,15 @@ export class Client {
     });
 
     ws.addEventListener('message', (e) => {
+      if (typeof e.data !== 'string') return;
       try {
-        const msg = JSON.parse(typeof e.data === 'string' ? e.data : '') as ServerMessage;
-        this.handleServerMessage(msg);
+        this.handleServerMessage(JSON.parse(e.data) as ServerMessage);
       } catch {
         // ignore malformed
       }
     });
 
     ws.addEventListener('close', () => {
-      if (this.closed) return;
       this.handlers.onStatus('disconnected');
       this.scheduleReconnect();
     });
@@ -98,11 +100,10 @@ export class Client {
   }
 
   private scheduleReconnect(): void {
-    if (this.closed) return;
     const idx = Math.min(this.reconnectAttempt, RECONNECT_BACKOFF_MS.length - 1);
     const delay = RECONNECT_BACKOFF_MS[idx] ?? 15000;
     this.reconnectAttempt++;
-    this.reconnectTimer = setTimeout(() => this.openSocket(), delay);
+    setTimeout(() => this.openSocket(), delay);
   }
 
   private handleServerMessage(msg: ServerMessage): void {
@@ -137,9 +138,6 @@ export class Client {
       }
       case 'black':
         this.reveal.togglePause();
-        break;
-      case 'reset-timer':
-        // Phase 3 owns the timer; presenter has nothing to do here yet.
         break;
     }
   }

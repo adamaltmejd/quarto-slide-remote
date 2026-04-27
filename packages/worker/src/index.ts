@@ -13,9 +13,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Random id, hex-encoded. 5 bytes ≈ 40 bits, plenty for a per-talk room.
-function genId(bytes: number): string {
-  const a = new Uint8Array(bytes);
+// 5 bytes ≈ 40 bits, plenty for a per-talk room.
+function genRoomId(): string {
+  const a = new Uint8Array(5);
   crypto.getRandomValues(a);
   return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -29,8 +29,8 @@ export default {
     }
 
     if (url.pathname === '/api/room/new' && request.method === 'POST') {
-      const roomId = genId(5);
-      const presenterToken = genId(16);
+      const roomId = genRoomId();
+      const presenterToken = crypto.randomUUID().replace(/-/g, '');
       const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
       const initRes = await stub.fetch(
         new Request(`https://room/init?token=${presenterToken}`, { method: 'POST' }),

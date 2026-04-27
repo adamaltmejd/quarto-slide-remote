@@ -36,7 +36,6 @@ export class RoomDO {
       if (!token) return new Response('bad request', { status: 400 });
       this.presenterToken = token;
       await this.state.storage.put('presenterToken', token);
-      await this.state.storage.put('createdAt', Date.now());
       return new Response('ok');
     }
 
@@ -89,7 +88,6 @@ export class RoomDO {
 
     if (msg.t === 'state' && role === 'presenter') {
       await this.state.storage.put('snapshot', msg.payload);
-      await this.state.storage.put('lastActive', Date.now());
       const out: ServerMessage = {
         t: 'state_snapshot',
         payload: msg.payload,
@@ -109,11 +107,14 @@ export class RoomDO {
   }
 
   webSocketClose(ws: WebSocket): void {
-    this.connections.delete(ws);
-    this.broadcastPeer();
+    this.dropConnection(ws);
   }
 
   webSocketError(ws: WebSocket): void {
+    this.dropConnection(ws);
+  }
+
+  private dropConnection(ws: WebSocket): void {
     this.connections.delete(ws);
     this.broadcastPeer();
   }

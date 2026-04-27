@@ -1,17 +1,33 @@
 // Slide-Remote deck plugin entry. Silent until the presenter activates via
 // `?remote=1`, Shift+R, or an opt-in corner button.
 
-import { Client } from './client';
+import { Client, type ClientStatus } from './client';
 import { type PluginConfig, readConfig, shouldDisable } from './config';
 import { Overlay, StatusBadge } from './overlay';
 import type { RevealApi, RevealPlugin } from './types';
+
+const STATUS_TEXT: Record<ClientStatus, string> = {
+  minting: 'minting room…',
+  connecting: 'connecting…',
+  connected: 'connected',
+  reconnecting: 'reconnecting…',
+  disconnected: 'disconnected',
+  failed: 'failed',
+};
+
+const BADGE_STATE: Record<ClientStatus, 'connected' | 'reconnecting' | 'disconnected'> = {
+  minting: 'reconnecting',
+  connecting: 'reconnecting',
+  connected: 'connected',
+  reconnecting: 'reconnecting',
+  disconnected: 'disconnected',
+  failed: 'disconnected',
+};
 
 class SlideRemoteController {
   private overlay?: Overlay;
   private badge?: StatusBadge;
   private client?: Client;
-  private lastJoinUrl?: string;
-  private lastRoomId?: string;
 
   constructor(
     private cfg: PluginConfig,
@@ -23,9 +39,8 @@ class SlideRemoteController {
   // so the presenter can rescan with another phone or recover after dismissing.
   activate(): void {
     if (this.client) {
-      if (this.lastJoinUrl && this.lastRoomId) {
-        this.overlay?.open(this.lastJoinUrl, this.lastRoomId);
-      }
+      const room = this.client.getRoom();
+      if (room) this.overlay?.open(room.joinUrl, room.roomId);
       return;
     }
     if (!this.cfg.workerUrl) {
@@ -36,17 +51,14 @@ class SlideRemoteController {
     this.badge = new StatusBadge();
     this.client = new Client(this.cfg.workerUrl, this.reveal, {
       onConnected: (joinUrl, roomId) => {
-        this.lastJoinUrl = joinUrl;
-        this.lastRoomId = roomId;
         this.overlay?.open(joinUrl, roomId);
         this.badge?.attach();
         this.badge?.setState('connected', `room ${roomId.slice(0, 6)}`);
       },
-      onStatus: (text) => {
-        this.overlay?.setStatus(text);
-        if (text === 'connected') this.badge?.setState('connected', 'paired');
-        else if (text === 'disconnected') this.badge?.setState('disconnected', 'offline');
-        else this.badge?.setState('reconnecting', text);
+      onStatus: (status) => {
+        this.overlay?.setStatus(STATUS_TEXT[status]);
+        const badgeText = status === 'connected' ? 'paired' : STATUS_TEXT[status];
+        this.badge?.setState(BADGE_STATE[status], badgeText);
       },
       onPeerCount: (_presenter, viewer) => {
         this.overlay?.setPeerCount(viewer);

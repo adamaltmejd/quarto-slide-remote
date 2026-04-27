@@ -21,18 +21,15 @@ function makeReveal(opts: {
   const slides = opts.slides ?? {};
   return {
     on: () => {},
-    off: () => {},
     next: () => {},
     prev: () => {},
     slide: () => {},
     togglePause: () => {},
     isPaused: () => opts.paused ?? false,
-    isOverview: () => false,
     getCurrentSlide: () => opts.current,
     getSlide: (h, v) => slides[`${h}.${v ?? 0}`],
     getIndices: () => indices,
     getTotalSlides: () => opts.total ?? 1,
-    addKeyBinding: () => {},
   };
 }
 

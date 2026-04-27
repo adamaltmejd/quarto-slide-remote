@@ -9,7 +9,7 @@
 // developing. At publish time, switch to `quarto add adamaltmejd/quarto-slide-remote`.
 
 import { watch } from 'node:fs';
-import { cp, mkdir, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,16 +29,6 @@ if (!consumer) {
 }
 
 const consumerExt = resolve(consumer, '_extensions', 'slide-remote');
-
-async function ensureConsumerExists(): Promise<void> {
-  try {
-    const s = await stat(consumer);
-    if (!s.isDirectory()) throw new Error(`${consumer} is not a directory`);
-  } catch (e) {
-    console.error(`error: SLIDE_REMOTE_CONSUMER does not exist: ${consumer}`);
-    throw e;
-  }
-}
 
 async function buildPlugin(): Promise<boolean> {
   const proc = Bun.spawn(['bun', buildScript], {
@@ -66,7 +56,6 @@ async function buildAndCopy(): Promise<void> {
   await copyToConsumer();
 }
 
-await ensureConsumerExists();
 await buildAndCopy();
 
 if (process.argv.includes('--watch')) {

@@ -33,7 +33,7 @@ export class ViewerClient {
 
   stop(): void {
     this.closed = true;
-    if (this.timer) clearTimeout(this.timer);
+    clearTimeout(this.timer);
     this.ws?.close();
   }
 
@@ -61,9 +61,9 @@ export class ViewerClient {
     });
 
     ws.addEventListener('message', (e) => {
+      if (typeof e.data !== 'string') return;
       try {
-        const msg = JSON.parse(typeof e.data === 'string' ? e.data : '') as ServerMessage;
-        this.dispatch(msg);
+        this.dispatch(JSON.parse(e.data) as ServerMessage);
       } catch {
         // ignore malformed
       }
@@ -107,10 +107,8 @@ export class ViewerClient {
 
   private reconnectNow(): void {
     if (this.closed) return;
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = undefined;
-    }
+    clearTimeout(this.timer);
+    this.timer = undefined;
     if (this.ws?.readyState === WebSocket.OPEN) return;
     this.attempt = 0;
     this.connect();

@@ -7,57 +7,75 @@ export interface OverlayHandlers {
   onClose: () => void;
 }
 
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className?: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function row(label: string, value: HTMLElement): HTMLDivElement {
+  const r = el('div', 'sr-overlay__row');
+  r.append(el('span', 'sr-overlay__label', label), value);
+  return r;
+}
+
 export class Overlay {
-  private el: HTMLDivElement;
+  private root: HTMLDivElement;
+  private qrHost: HTMLDivElement;
   private statusEl: HTMLSpanElement;
   private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
 
   constructor(handlers: OverlayHandlers) {
-    this.el = document.createElement('div');
-    this.el.className = 'sr-overlay';
-    this.el.innerHTML = `
-      <div class="sr-overlay__panel" role="dialog" aria-modal="true" aria-label="Slide remote pairing">
-        <button class="sr-overlay__close" type="button" aria-label="Close">×</button>
-        <h2 class="sr-overlay__title">Pair your phone</h2>
-        <div class="sr-overlay__qr"></div>
-        <div class="sr-overlay__meta">
-          <div class="sr-overlay__row"><span class="sr-overlay__label">Room</span><span class="sr-overlay__code"></span></div>
-          <div class="sr-overlay__row"><span class="sr-overlay__label">Status</span><span class="sr-overlay__status">connecting…</span></div>
-          <div class="sr-overlay__row"><span class="sr-overlay__label">Phones</span><span class="sr-overlay__peer">0</span></div>
-        </div>
-        <p class="sr-overlay__hint">Scan with your iPhone camera. Press Esc to dismiss.</p>
-      </div>
-    `;
+    this.qrHost = el('div', 'sr-overlay__qr');
+    this.codeEl = el('span', 'sr-overlay__code');
+    this.statusEl = el('span', 'sr-overlay__status', 'connecting…');
+    this.peerEl = el('span', 'sr-overlay__peer', '0');
 
-    const closeBtn = this.el.querySelector<HTMLButtonElement>('.sr-overlay__close');
-    closeBtn?.addEventListener('click', handlers.onClose);
-    this.el.addEventListener('click', (e) => {
-      if (e.target === this.el) handlers.onClose();
+    const closeBtn = el('button', 'sr-overlay__close', '×');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.addEventListener('click', handlers.onClose);
+
+    const meta = el('div', 'sr-overlay__meta');
+    meta.append(row('Room', this.codeEl), row('Status', this.statusEl), row('Phones', this.peerEl));
+
+    const panel = el('div', 'sr-overlay__panel');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', 'Slide remote pairing');
+    panel.append(
+      closeBtn,
+      el('h2', 'sr-overlay__title', 'Pair your phone'),
+      this.qrHost,
+      meta,
+      el('p', 'sr-overlay__hint', 'Scan with your iPhone camera. Press Esc to dismiss.'),
+    );
+
+    this.root = el('div', 'sr-overlay');
+    this.root.appendChild(panel);
+    this.root.addEventListener('click', (e) => {
+      if (e.target === this.root) handlers.onClose();
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.el.isConnected) handlers.onClose();
+      if (e.key === 'Escape' && this.root.isConnected) handlers.onClose();
     });
-
-    this.statusEl = this.el.querySelector<HTMLSpanElement>(
-      '.sr-overlay__status',
-    ) as HTMLSpanElement;
-    this.peerEl = this.el.querySelector<HTMLSpanElement>('.sr-overlay__peer') as HTMLSpanElement;
-    this.codeEl = this.el.querySelector<HTMLSpanElement>('.sr-overlay__code') as HTMLSpanElement;
   }
 
   open(joinUrl: string, roomId: string): void {
-    const qrHost = this.el.querySelector<HTMLDivElement>('.sr-overlay__qr');
-    if (qrHost) {
-      qrHost.innerHTML = qrSvg(joinUrl, 256);
-      qrHost.dataset.joinUrl = joinUrl;
-    }
+    this.qrHost.innerHTML = qrSvg(joinUrl, 256);
+    this.qrHost.dataset.joinUrl = joinUrl;
     this.codeEl.textContent = roomId;
-    if (!this.el.isConnected) document.body.appendChild(this.el);
+    if (!this.root.isConnected) document.body.appendChild(this.root);
   }
 
   close(): void {
-    this.el.remove();
+    this.root.remove();
   }
 
   setStatus(text: string): void {
@@ -72,25 +90,22 @@ export class Overlay {
 // Tiny non-blocking status badge in the corner once paired, so the presenter
 // always sees connection state without the full overlay.
 export class StatusBadge {
-  private el: HTMLDivElement;
+  private root: HTMLDivElement;
+  private textEl: HTMLSpanElement;
 
   constructor() {
-    this.el = document.createElement('div');
-    this.el.className = 'sr-badge';
-    this.el.innerHTML = `<span class="sr-badge__dot"></span><span class="sr-badge__text">paired</span>`;
+    const dot = el('span', 'sr-badge__dot');
+    this.textEl = el('span', 'sr-badge__text', 'paired');
+    this.root = el('div', 'sr-badge');
+    this.root.append(dot, this.textEl);
   }
 
   attach(): void {
-    if (!this.el.isConnected) document.body.appendChild(this.el);
-  }
-
-  detach(): void {
-    this.el.remove();
+    if (!this.root.isConnected) document.body.appendChild(this.root);
   }
 
   setState(state: 'connected' | 'reconnecting' | 'disconnected', text: string): void {
-    this.el.dataset.state = state;
-    const t = this.el.querySelector<HTMLSpanElement>('.sr-badge__text');
-    if (t) t.textContent = text;
+    this.root.dataset.state = state;
+    this.textEl.textContent = text;
   }
 }

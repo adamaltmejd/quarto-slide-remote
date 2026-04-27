@@ -1,86 +1,93 @@
 // Phone UI rendering — plain DOM, no framework.
 
-import type { ServerMessage, SlideState } from '@slide-remote/protocol';
+import type { SlideState } from '@slide-remote/protocol';
+
+export type ViewerStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 export interface UI {
   root: HTMLElement;
-  setStatus(
-    text: string,
-    state: 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error',
-  ): void;
+  setStatus(text: string, state: ViewerStatus): void;
   setRoom(roomId: string): void;
   setPeerCount(presenter: number, viewer: number): void;
   setState(s: SlideState): void;
   showError(msg: string): void;
 }
 
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className?: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
 export function buildUi(handlers: { onPrev: () => void; onNext: () => void }): UI {
-  const root = document.createElement('div');
-  root.className = 'sr';
-  root.innerHTML = `
-    <header class="sr__top">
-      <span class="sr__dot" data-state="connecting" aria-hidden="true"></span>
-      <span class="sr__status">connecting…</span>
-      <span class="sr__spacer"></span>
-      <span class="sr__room" aria-label="Room"></span>
-      <span class="sr__peer" aria-label="Phones in room">·</span>
-    </header>
-    <main class="sr__body">
-      <div class="sr__slide">
-        <div class="sr__pos"></div>
-        <div class="sr__title">—</div>
-      </div>
-      <div class="sr__notes" aria-live="polite"></div>
-      <div class="sr__error" role="alert" hidden></div>
-    </main>
-    <footer class="sr__controls">
-      <button class="sr__btn sr__btn--prev" type="button" aria-label="Previous slide">◀</button>
-      <button class="sr__btn sr__btn--next" type="button" aria-label="Next slide">▶</button>
-    </footer>
-  `;
+  const dot = el('span', 'sr__dot');
+  dot.dataset.state = 'connecting';
+  dot.setAttribute('aria-hidden', 'true');
+  const statusEl = el('span', 'sr__status', 'connecting…');
+  const roomEl = el('span', 'sr__room');
+  roomEl.setAttribute('aria-label', 'Room');
+  const peerEl = el('span', 'sr__peer', '·');
+  peerEl.setAttribute('aria-label', 'Phones in room');
 
-  const dot = root.querySelector<HTMLElement>('.sr__dot');
-  const statusEl = root.querySelector<HTMLElement>('.sr__status');
-  const roomEl = root.querySelector<HTMLElement>('.sr__room');
-  const peerEl = root.querySelector<HTMLElement>('.sr__peer');
-  const posEl = root.querySelector<HTMLElement>('.sr__pos');
-  const titleEl = root.querySelector<HTMLElement>('.sr__title');
-  const notesEl = root.querySelector<HTMLElement>('.sr__notes');
-  const errorEl = root.querySelector<HTMLElement>('.sr__error');
-  const prevBtn = root.querySelector<HTMLButtonElement>('.sr__btn--prev');
-  const nextBtn = root.querySelector<HTMLButtonElement>('.sr__btn--next');
+  const top = el('header', 'sr__top');
+  top.append(dot, statusEl, el('span', 'sr__spacer'), roomEl, peerEl);
 
-  prevBtn?.addEventListener('click', handlers.onPrev);
-  nextBtn?.addEventListener('click', handlers.onNext);
+  const posEl = el('div', 'sr__pos');
+  const titleEl = el('div', 'sr__title', '—');
+  const slide = el('div', 'sr__slide');
+  slide.append(posEl, titleEl);
+
+  const notesEl = el('div', 'sr__notes');
+  notesEl.setAttribute('aria-live', 'polite');
+
+  const errorEl = el('div', 'sr__error');
+  errorEl.setAttribute('role', 'alert');
+  errorEl.hidden = true;
+
+  const body = el('main', 'sr__body');
+  body.append(slide, notesEl, errorEl);
+
+  const prevBtn = el('button', 'sr__btn sr__btn--prev', '◀');
+  prevBtn.type = 'button';
+  prevBtn.setAttribute('aria-label', 'Previous slide');
+  prevBtn.addEventListener('click', handlers.onPrev);
+  const nextBtn = el('button', 'sr__btn sr__btn--next', '▶');
+  nextBtn.type = 'button';
+  nextBtn.setAttribute('aria-label', 'Next slide');
+  nextBtn.addEventListener('click', handlers.onNext);
+
+  const controls = el('footer', 'sr__controls');
+  controls.append(prevBtn, nextBtn);
+
+  const root = el('div', 'sr');
+  root.append(top, body, controls);
 
   return {
     root,
     setStatus(text, state) {
-      if (dot) dot.dataset.state = state;
-      if (statusEl) statusEl.textContent = text;
+      dot.dataset.state = state;
+      statusEl.textContent = text;
     },
     setRoom(roomId) {
-      if (roomEl) roomEl.textContent = roomId.slice(0, 6);
+      roomEl.textContent = roomId.slice(0, 6);
     },
     setPeerCount(_presenter, viewer) {
-      if (peerEl) peerEl.textContent = viewer > 1 ? `${viewer} phones` : '·';
+      peerEl.textContent = viewer > 1 ? `${viewer} phones` : '·';
     },
     setState(s) {
-      if (posEl) posEl.textContent = `${s.h + 1} / ${s.total}`;
-      if (titleEl) titleEl.textContent = s.title || '(untitled)';
-      if (notesEl) {
-        if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
-        else notesEl.textContent = 'No notes for this slide.';
-      }
+      posEl.textContent = `${s.h + 1} / ${s.total}`;
+      titleEl.textContent = s.title || '(untitled)';
+      if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
+      else notesEl.textContent = 'No notes for this slide.';
     },
     showError(msg) {
-      if (!errorEl) return;
       errorEl.textContent = msg;
       errorEl.hidden = false;
     },
   };
-}
-
-export function snapshotPayload(msg: ServerMessage): SlideState | null {
-  return msg.t === 'state_snapshot' ? msg.payload : null;
 }
