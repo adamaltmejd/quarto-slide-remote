@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-27
+
 ### Changed — deck UI lives invisibly while paired
 
 - **Status badge moved to top-right** (was bottom-right) so it never
@@ -181,6 +183,26 @@ beyond opening the deck URL.
 - GitHub Actions CI running unit, integration, and decktape-silent jobs.
 - Biome 2 lint + format with zero warnings/infos at release.
 
-[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.1.1...HEAD
+### Fixed and tightened (post-review polish)
+
+- **Phone wake lock** — `release()` removes its `visibilitychange`
+  listener; `tryRequest()` drops a sentinel resolved during a release
+  window instead of latching onto a dead lock.
+- **Phone WS** — `stop()` removes its `online` listener.
+- **Pairing overlay** — Escape keydown listener bound only while
+  mounted; QR SVG cached against the join URL so reopens skip the
+  regeneration when nothing changed.
+- **Phone snapshot hot path** — timer textContent and notes
+  `innerHTML` are diff-guarded; per-second ticks and per-snapshot
+  writes no-op when unchanged. Notes subtree is no longer torn down
+  on fragment toggles or `resetTimer`.
+- **`bun run demo`** — pre-probes `:8787` / `:5174` and fails fast
+  with an `lsof` hint instead of hanging 30 s when an orphan from a
+  prior run is bound. Skips the redundant initial build when watch
+  is enabled. Worker readiness probe switched from `POST /api/room/new`
+  (minted orphan rooms each retry) to `GET /`.
+
+[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.1
 [0.1.0]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.0
