@@ -3,8 +3,10 @@
 Working toward a stable, publishable v0.1 release. Items above the current
 working state are stable and shipped; items below describe what's still open.
 
-Current state: **v0.1.0-rc** — MVP works end-to-end against a deployed Worker.
-Remaining work before tagging v0.1.0 is mostly quality and release hygiene.
+Current state: **v0.1.0-rc** — MVP works end-to-end against a deployed Worker;
+quality + tooling (lint/format, unit tests, integration test, pre-commit hook,
+CI workflow, size budget, decktape-silent assertion) are wired up. Remaining
+work before tagging v0.1.0 is documentation and release packaging.
 
 ---
 
@@ -25,19 +27,19 @@ quality and packaging items below.
 - [x] Worker deployed (`slide-remote.adamaltmejd.workers.dev`) and consumer wired in EC7422 lectures
 - [x] Notes sanitizer drops dangerous container tags (`<style>`, `<script>`, `<svg>`, `<math>`, …)
 
-### Quality and tooling — open
+### Quality and tooling — done
 
-- [ ] Add `lint` and `format` package.json scripts (biome 2 is installed but not scripted)
-- [ ] Add `bun test` and write unit tests:
-  - [ ] `sanitize.ts` — regression for the `<style>` leak; allowlist coverage; `data:image/` allowed only on `img.src`; `javascript:` blocked everywhere
-  - [ ] `extract.ts` — title fallback chain; notes capping at 64 KB; next-slide title across vertical/horizontal stacks
-  - [ ] `protocol/index.ts` — minimal type round-trip via JSON.parse/stringify
-- [ ] Promote `scripts/ws-smoke.ts` into a runnable `bun test` integration suite that boots `wrangler dev` itself
-- [ ] Pre-commit hook (lefthook or simple-git-hooks) running `biome check --write` + `tsc --noEmit`
-- [ ] GitHub Actions CI: typecheck → lint → unit tests → build → smoke test against `wrangler dev`
-- [ ] Bundle-size budget check in CI (deck plugin currently ~64 KB unminified; aim for <30 KB minified+gzip)
-- [ ] Minify the deck-plugin IIFE in production builds (`bun build --minify`)
-- [ ] Verify the plugin is silent during decktape PDF rendering in CI (load the rendered HTML headless with `?handout=true` and assert no socket / no DOM mutations)
+- [x] `lint` (`biome check`), `format` (`biome check --write`), `test` (`bun test`), `size`, `test:smoke` package scripts
+- [x] `bun test` + happy-dom unit tests:
+  - [x] `sanitize.ts` — `<style>` leak regression, allowlist, `data:image/` only on `img.src`, `javascript:` blocked everywhere (20 tests)
+  - [x] `extract.ts` — title fallback chain, 64 KB notes cap, next-slide title across vertical/horizontal stacks (13 tests)
+  - [x] `protocol/index.ts` — JSON round-trip across SlideState / ClientMessage / ServerMessage (7 tests)
+- [x] `packages/worker/test/integration.test.ts` — boots `wrangler dev` itself; gated by `SR_INTEGRATION=1` so default `bun test` stays fast
+- [x] Pre-commit hook via `git config core.hooksPath .githooks` (`bun run hooks:install`); `.githooks/pre-commit` runs lint + typecheck + tests
+- [x] GitHub Actions CI (`.github/workflows/ci.yml`): three jobs — `unit` (lint → typecheck → bun test → build → size), `integration` (`bun run test:smoke`), `decktape-silent` (assert no socket / DOM / console writes under `?handout=true`)
+- [x] Bundle-size budget at 30 KB gzip enforced by `scripts/size-check.ts` (current minified bundle: 30 KB raw / **11.4 KB gzip**)
+- [x] Minified release build via `bun run build:plugin:min`; `bun run deploy` uses it before `wrangler deploy`
+- [x] Decktape-silent assertion via `scripts/check-decktape-silent.ts` (happy-dom env, eval'd IIFE, asserts wsCount == 0, no body mutations, no keydown listener, no console writes)
 
 ### Documentation and packaging — open
 

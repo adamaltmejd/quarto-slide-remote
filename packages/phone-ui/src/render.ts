@@ -4,17 +4,17 @@ import type { ServerMessage, SlideState } from '@slide-remote/protocol';
 
 export interface UI {
   root: HTMLElement;
-  setStatus(text: string, state: 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error'): void;
+  setStatus(
+    text: string,
+    state: 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error',
+  ): void;
   setRoom(roomId: string): void;
   setPeerCount(presenter: number, viewer: number): void;
   setState(s: SlideState): void;
   showError(msg: string): void;
 }
 
-export function buildUi(handlers: {
-  onPrev: () => void;
-  onNext: () => void;
-}): UI {
+export function buildUi(handlers: { onPrev: () => void; onNext: () => void }): UI {
   const root = document.createElement('div');
   root.className = 'sr';
   root.innerHTML = `

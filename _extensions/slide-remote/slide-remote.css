@@ -35,7 +35,9 @@
   cursor: pointer;
   padding: 6px 10px;
 }
-.sr-overlay__close:hover { color: #fff; }
+.sr-overlay__close:hover {
+  color: #fff;
+}
 
 .sr-overlay__title {
   margin: 0 0 16px;
@@ -53,7 +55,11 @@
   border-radius: 12px;
   margin-bottom: 16px;
 }
-.sr-overlay__qr svg { display: block; max-width: 100%; height: auto; }
+.sr-overlay__qr svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
 
 .sr-overlay__meta {
   display: flex;
@@ -66,9 +72,15 @@
   justify-content: space-between;
   gap: 16px;
 }
-.sr-overlay__label { color: #8a8a8a; }
+.sr-overlay__label {
+  color: #8a8a8a;
+}
 .sr-overlay__code {
-  font-family: ui-monospace, SF Mono, Menlo, monospace;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
   letter-spacing: 0.04em;
 }
 
@@ -103,11 +115,21 @@
   border-radius: 50%;
   background: #4ade80;
 }
-.sr-badge[data-state='reconnecting'] .sr-badge__dot { background: #facc15; animation: sr-pulse 1.2s infinite; }
-.sr-badge[data-state='disconnected'] .sr-badge__dot { background: #f87171; }
+.sr-badge[data-state="reconnecting"] .sr-badge__dot {
+  background: #facc15;
+  animation: sr-pulse 1.2s infinite;
+}
+.sr-badge[data-state="disconnected"] .sr-badge__dot {
+  background: #f87171;
+}
 @keyframes sr-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .sr-trigger {
@@ -127,4 +149,6 @@
   opacity: 0.4;
   transition: opacity 120ms ease;
 }
-.sr-trigger:hover { opacity: 1; }
+.sr-trigger:hover {
+  opacity: 1;
+}

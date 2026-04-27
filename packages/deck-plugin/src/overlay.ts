@@ -39,7 +39,9 @@ export class Overlay {
       if (e.key === 'Escape' && this.el.isConnected) handlers.onClose();
     });
 
-    this.statusEl = this.el.querySelector<HTMLSpanElement>('.sr-overlay__status') as HTMLSpanElement;
+    this.statusEl = this.el.querySelector<HTMLSpanElement>(
+      '.sr-overlay__status',
+    ) as HTMLSpanElement;
     this.peerEl = this.el.querySelector<HTMLSpanElement>('.sr-overlay__peer') as HTMLSpanElement;
     this.codeEl = this.el.querySelector<HTMLSpanElement>('.sr-overlay__code') as HTMLSpanElement;
   }

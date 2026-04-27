@@ -43,17 +43,33 @@ body {
   border-radius: 50%;
   background: #facc15;
 }
-.sr__dot[data-state='connected'] { background: #4ade80; }
-.sr__dot[data-state='reconnecting'] { background: #facc15; }
-.sr__dot[data-state='disconnected'],
-.sr__dot[data-state='error'] { background: #f87171; }
-.sr__status { color: #c8c8c8; }
-.sr__spacer { flex: 1; }
+.sr__dot[data-state="connected"] {
+  background: #4ade80;
+}
+.sr__dot[data-state="reconnecting"] {
+  background: #facc15;
+}
+.sr__dot[data-state="disconnected"],
+.sr__dot[data-state="error"] {
+  background: #f87171;
+}
+.sr__status {
+  color: #c8c8c8;
+}
+.sr__spacer {
+  flex: 1;
+}
 .sr__room {
-  font-family: ui-monospace, SF Mono, Menlo, monospace;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
   color: #888;
 }
-.sr__peer { color: #888; }
+.sr__peer {
+  color: #888;
+}
 
 .sr__body {
   flex: 1;
@@ -70,7 +86,11 @@ body {
   gap: 12px;
 }
 .sr__pos {
-  font-family: ui-monospace, SF Mono, Menlo, monospace;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
   color: #777;
   font-size: 13px;
   flex-shrink: 0;
@@ -92,15 +112,23 @@ body {
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 0.9em;
-  font-family: ui-monospace, SF Mono, Menlo, monospace;
+  font-family:
+    ui-monospace,
+    SF Mono,
+    Menlo,
+    monospace;
 }
 .sr__notes ul,
 .sr__notes ol {
   padding-left: 1.4em;
   margin: 0.5em 0;
 }
-.sr__notes p { margin: 0.5em 0; }
-.sr__notes a { color: #93c5fd; }
+.sr__notes p {
+  margin: 0.5em 0;
+}
+.sr__notes a {
+  color: #93c5fd;
+}
 
 .sr__error {
   background: #3f1d1d;
@@ -128,14 +156,26 @@ body {
   font-size: 28px;
   height: 72px;
   cursor: pointer;
-  transition: background 80ms ease, transform 80ms ease;
+  transition:
+    background 80ms ease,
+    transform 80ms ease;
   -webkit-tap-highlight-color: transparent;
 }
-.sr__btn:active { background: #2a2a2a; transform: scale(0.98); }
+.sr__btn:active {
+  background: #2a2a2a;
+  transform: scale(0.98);
+}
 
 .sr-fatal {
   padding: 32px 24px;
   text-align: center;
 }
-.sr-fatal h1 { font-size: 18px; color: #888; font-weight: 500; margin: 0 0 8px; }
-.sr-fatal p { color: #d4d4d4; }
+.sr-fatal h1 {
+  font-size: 18px;
+  color: #888;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.sr-fatal p {
+  color: #d4d4d4;
+}

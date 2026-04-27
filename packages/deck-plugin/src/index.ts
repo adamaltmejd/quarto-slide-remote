@@ -73,7 +73,13 @@ function plugin(): RevealPlugin {
       }
       // Shift+R to summon the pairing overlay mid-deck.
       document.addEventListener('keydown', (e) => {
-        if (e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'R' || e.key === 'r')) {
+        if (
+          e.shiftKey &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          (e.key === 'R' || e.key === 'r')
+        ) {
           const target = e.target as HTMLElement | null;
           if (target?.matches('input, textarea, [contenteditable="true"]')) return;
           e.preventDefault();
