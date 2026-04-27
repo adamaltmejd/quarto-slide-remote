@@ -56,14 +56,14 @@ export function buildUi(handlers: { onPrev: () => void; onNext: () => void }): U
   return {
     root,
     setStatus(text, state) {
-      if (dot) dot.dataset['state'] = state;
+      if (dot) dot.dataset.state = state;
       if (statusEl) statusEl.textContent = text;
     },
     setRoom(roomId) {
       if (roomEl) roomEl.textContent = roomId.slice(0, 6);
     },
-    setPeerCount(_presenter, _viewer) {
-      // Reserved for richer presence display in Phase 3.
+    setPeerCount(_presenter, viewer) {
+      if (peerEl) peerEl.textContent = viewer > 1 ? `${viewer} phones` : '·';
     },
     setState(s) {
       if (posEl) posEl.textContent = `${s.h + 1} / ${s.total}`;

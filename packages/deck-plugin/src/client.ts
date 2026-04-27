@@ -6,7 +6,6 @@ import type {
   Command,
   RoomCreateResponse,
   ServerMessage,
-  SlideState,
 } from '@slide-remote/protocol';
 import { extractState } from './extract';
 import type { RevealApi } from './types';
@@ -26,7 +25,6 @@ export class Client {
   private reconnectAttempt = 0;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private closed = false;
-  private pendingState?: SlideState;
   private flushTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
@@ -172,7 +170,6 @@ export class Client {
   private pumpStateNow(): void {
     if (!this.room) return;
     const state = extractState(this.reveal, this.room.roomId);
-    this.pendingState = state;
     if (this.ws?.readyState === WebSocket.OPEN) {
       const msg: ClientMessage = { t: 'state', payload: state };
       this.ws.send(JSON.stringify(msg));
