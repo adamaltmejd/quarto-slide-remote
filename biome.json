@@ -1,0 +1,28 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.wrangler",
+      "!dist",
+      "!_extensions/slide-remote/slide-remote.js",
+      "!packages/worker/assets"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": { "noExplicitAny": "warn" }
+    }
+  },
+  "javascript": {
+    "formatter": { "quoteStyle": "single", "semicolons": "always", "trailingCommas": "all" }
+  }
+}

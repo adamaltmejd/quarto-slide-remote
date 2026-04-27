@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+.dev.vars
+dist/
+*.log
+.DS_Store
+
+# packages/worker/assets/ is the phone-ui build output (created by `bun run build:phone`).
+# wrangler.toml requires the directory to exist; only the .gitkeep is tracked.
+/packages/worker/assets/*
+!/packages/worker/assets/.gitkeep

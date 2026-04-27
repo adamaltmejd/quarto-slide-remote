@@ -1,0 +1,25 @@
+{
+  "name": "quarto-slide-remote",
+  "version": "0.1.0",
+  "private": true,
+  "description": "iPhone remote control + speaker-notes companion for static reveal.js decks",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:plugin": "bun packages/deck-plugin/build.ts",
+    "build:phone": "bun packages/phone-ui/build.ts",
+    "dev:plugin": "bun packages/deck-plugin/build.ts --watch",
+    "dev:phone": "bun packages/phone-ui/build.ts --watch",
+    "dev:worker": "cd packages/worker && bunx wrangler dev",
+    "dev:install": "bun scripts/dev-install.ts --watch",
+    "deploy": "bun run build:plugin && bun run build:phone && cd packages/worker && bunx wrangler deploy",
+    "typecheck": "tsc --noEmit -p packages/protocol && tsc --noEmit -p packages/deck-plugin && tsc --noEmit -p packages/phone-ui && tsc --noEmit -p packages/worker"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@types/bun": "^1.3.12",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.83.0"
+  }
+}
