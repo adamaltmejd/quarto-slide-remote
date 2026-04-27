@@ -1,43 +1,38 @@
-// Asserts the deck plugin is fully silent during decktape-style PDF rendering.
+// Asserts the deck plugin is fully silent in every bail-out scenario.
 //
-// Registers happy-dom globals (DOMParser, document, navigator, …), seeds URL
-// params and meta tags so `shouldDisable()` returns true, evaluates the
-// built _extensions/slide-remote/slide-remote.js, and calls the plugin's
-// `init(...)` with a stub Reveal. Verifies:
+// Registers happy-dom globals (DOMParser, document, navigator, …), evaluates
+// the built _extensions/slide-remote/slide-remote.js once, then for each
+// scenario seeds URL params + meta tags, calls the plugin's `init(...)` with
+// a stub Reveal, and verifies:
 //   - no WebSocket constructed
 //   - no body children appended (no overlay, no badge, no trigger button)
 //   - no keydown listeners attached to document
 //   - no console writes
 //
-// Exit non-zero on any violation.
+// Scenarios cover:
+//   1. `?handout=true` with a configured worker-url (decktape-style render)
+//   2. consumer didn't set worker-url at all (filter.lua emits empty content)
+//   3. per-deck kill switch via <meta name="slide-remote-enabled" content="false">
+//
+// Exit non-zero on any violation in any scenario.
 
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 
-GlobalRegistrator.register({ url: 'https://example.com/lecture.html?handout=true' });
+GlobalRegistrator.register({ url: 'https://example.com/lecture.html' });
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const bundlePath = resolve(repoRoot, '_extensions', 'slide-remote', 'slide-remote.js');
 
-const violations: string[] = [];
-
-// Meta tags that filter.lua emits for a typical consumer.
-for (const [name, content] of [
-  ['slide-remote-worker-url', 'https://example.workers.dev'],
-  ['slide-remote-show-button', 'true'],
-  ['slide-remote-disable-on-params', 'handout'],
-]) {
-  const m = document.createElement('meta');
-  m.setAttribute('name', name);
-  m.setAttribute('content', content);
-  document.head.appendChild(m);
-}
+// --- side-effect counters (reset per scenario) ---
+let wsCount = 0;
+let keydownListeners = 0;
+let consoleWrites: string[] = [];
 
 // Capture WebSocket construction.
-let wsCount = 0;
 const RealWS = globalThis.WebSocket;
 class TrackedWS extends (RealWS as unknown as typeof WebSocket) {
   constructor(url: string | URL, protocols?: string | string[]) {
@@ -48,8 +43,11 @@ class TrackedWS extends (RealWS as unknown as typeof WebSocket) {
 (globalThis as { WebSocket: typeof WebSocket }).WebSocket =
   TrackedWS as unknown as typeof WebSocket;
 
-// Capture console writes.
-const consoleWrites: string[] = [];
+// Capture console writes; keep originals for our own reporting.
+const originalConsole = {
+  log: console.log.bind(console),
+  error: console.error.bind(console),
+};
 for (const level of ['log', 'info', 'warn', 'error', 'debug'] as const) {
   const original = console[level].bind(console);
   console[level] = ((...args: unknown[]) => {
@@ -58,11 +56,7 @@ for (const level of ['log', 'info', 'warn', 'error', 'debug'] as const) {
   }) as typeof console.log;
 }
 
-// Capture body mutations.
-const bodyChildrenBefore = document.body.children.length;
-
 // Track keydown listeners attached to document.
-let keydownListeners = 0;
 type AddEventListener = typeof document.addEventListener;
 const realAdd = document.addEventListener.bind(document) as AddEventListener;
 document.addEventListener = ((
@@ -98,32 +92,92 @@ indirectEval(code);
 const SlideRemote = (globalThis as { SlideRemote?: () => { init: (r: unknown) => void } })
   .SlideRemote;
 if (typeof SlideRemote !== 'function') {
-  violations.push('window.SlideRemote was not registered by the bundle');
-} else {
-  const plugin = SlideRemote();
-  plugin.init(reveal);
+  originalConsole.error('[decktape-silent] FAIL: window.SlideRemote not registered by the bundle');
+  GlobalRegistrator.unregister();
+  process.exit(1);
 }
 
-const bodyChildrenAfter = document.body.children.length;
+interface Scenario {
+  name: string;
+  path: string; // pathname + search
+  metas: Record<string, string>;
+}
 
-if (wsCount !== 0) violations.push(`WebSocket constructed ${wsCount} times`);
-if (bodyChildrenAfter !== bodyChildrenBefore) {
-  violations.push(`body children mutated: ${bodyChildrenBefore} → ${bodyChildrenAfter}`);
-}
-if (keydownListeners !== 0) {
-  violations.push(`keydown listeners attached: ${keydownListeners}`);
-}
-if (consoleWrites.length !== 0) {
-  violations.push(`console writes:\n  ${consoleWrites.join('\n  ')}`);
+const scenarios: Scenario[] = [
+  {
+    name: 'decktape ?handout=true with disable-on-params',
+    path: '/lecture.html?handout=true',
+    metas: {
+      'slide-remote-worker-url': 'https://example.workers.dev',
+      'slide-remote-show-button': 'true',
+      'slide-remote-disable-on-params': 'handout',
+    },
+  },
+  {
+    name: 'consumer omitted worker-url (filter.lua emits empty content)',
+    path: '/lecture.html',
+    metas: {
+      'slide-remote-worker-url': '',
+      'slide-remote-show-button': 'false',
+      'slide-remote-disable-on-params': '',
+    },
+  },
+  {
+    name: 'per-deck kill switch <meta slide-remote-enabled="false">',
+    path: '/lecture.html',
+    metas: {
+      'slide-remote-worker-url': 'https://example.workers.dev',
+      'slide-remote-show-button': 'true',
+      'slide-remote-disable-on-params': '',
+      'slide-remote-enabled': 'false',
+    },
+  },
+];
+
+const violations: string[] = [];
+
+for (const sc of scenarios) {
+  document.head.innerHTML = '';
+  document.body.innerHTML = '';
+  history.replaceState(null, '', sc.path);
+  for (const [name, content] of Object.entries(sc.metas)) {
+    const m = document.createElement('meta');
+    m.setAttribute('name', name);
+    m.setAttribute('content', content);
+    document.head.appendChild(m);
+  }
+
+  wsCount = 0;
+  keydownListeners = 0;
+  consoleWrites = [];
+  const bodyChildrenBefore = document.body.children.length;
+
+  SlideRemote().init(reveal);
+
+  const bodyChildrenAfter = document.body.children.length;
+  if (wsCount !== 0) violations.push(`[${sc.name}] WebSocket constructed ${wsCount} times`);
+  if (bodyChildrenAfter !== bodyChildrenBefore) {
+    violations.push(
+      `[${sc.name}] body children mutated: ${bodyChildrenBefore} → ${bodyChildrenAfter}`,
+    );
+  }
+  if (keydownListeners !== 0) {
+    violations.push(`[${sc.name}] keydown listeners attached: ${keydownListeners}`);
+  }
+  if (consoleWrites.length !== 0) {
+    violations.push(`[${sc.name}] console writes:\n    ${consoleWrites.join('\n    ')}`);
+  }
 }
 
 if (violations.length === 0) {
-  console.log('[decktape-silent] OK — plugin is silent under ?handout=true');
+  originalConsole.log(
+    `[decktape-silent] OK — silent across ${scenarios.length} bail-out scenarios`,
+  );
   GlobalRegistrator.unregister();
   process.exit(0);
 }
 
-console.error('[decktape-silent] FAIL:');
-for (const v of violations) console.error(`  - ${v}`);
+originalConsole.error('[decktape-silent] FAIL:');
+for (const v of violations) originalConsole.error(`  - ${v}`);
 GlobalRegistrator.unregister();
 process.exit(1);

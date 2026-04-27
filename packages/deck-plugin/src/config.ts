@@ -23,6 +23,11 @@ export function readConfig(): PluginConfig {
 
 export function shouldDisable(cfg: PluginConfig): boolean {
   if (typeof window === 'undefined') return true;
+  // Empty worker-url means the consumer didn't configure us; stay silent
+  // rather than register listeners that lead nowhere.
+  if (!cfg.workerUrl) return true;
+  // Per-deck kill switch: <meta name="slide-remote-enabled" content="false">
+  if (meta('slide-remote-enabled') === 'false') return true;
   const params = new URLSearchParams(window.location.search);
   if (params.has('print-pdf')) return true;
   for (const p of cfg.disableOnParams) {

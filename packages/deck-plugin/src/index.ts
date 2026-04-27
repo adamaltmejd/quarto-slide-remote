@@ -37,14 +37,11 @@ class SlideRemoteController {
   // Called by every activation trigger (?remote=1, Shift+R, button click).
   // First call mints a room and connects; later calls just re-open the overlay
   // so the presenter can rescan with another phone or recover after dismissing.
+  // shouldDisable() already guarantees a non-empty workerUrl.
   activate(): void {
     if (this.client) {
       const room = this.client.getRoom();
       if (room) this.overlay?.open(room.joinUrl, room.roomId);
-      return;
-    }
-    if (!this.cfg.workerUrl) {
-      console.error('[slide-remote] missing slide-remote.worker-url in YAML');
       return;
     }
     this.overlay = new Overlay({ onClose: () => this.overlay?.close() });
