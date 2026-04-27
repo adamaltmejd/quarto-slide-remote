@@ -1,6 +1,13 @@
 // Wire protocol shared between deck plugin, phone UI, and Worker DO.
 // Messages are JSON over a WebSocket. Each side is either presenter (the deck)
 // or viewer (the phone).
+//
+// Trust model: the worker doesn't enforce a single-presenter constraint. If
+// two clients connect with role=presenter to the same room (e.g. the same
+// deck reloaded in two tabs), both can publish state and the last write
+// wins. This is intentional for v0.1 — one talk maps to one presenter
+// token, and the cost of policing it isn't worth the implementation surface.
+// It is *not* a robust multi-presenter protocol.
 
 export type Role = 'presenter' | 'viewer';
 

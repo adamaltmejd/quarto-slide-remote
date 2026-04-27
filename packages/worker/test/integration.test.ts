@@ -104,6 +104,9 @@ function open(role: 'presenter' | 'viewer', room: RoomBody, token = room.present
   const ws = new WebSocket(url.toString());
   const msgs: unknown[] = [];
   ws.onmessage = (e) => {
+    // The DO only ever sends string frames. If something binary slips
+    // through, JSON.parse('') throws and the test fails loudly rather
+    // than silently swallowing the message — which is what we want.
     msgs.push(JSON.parse(typeof e.data === 'string' ? e.data : ''));
   };
   // Always attach error/close listeners so an auth-rejected upgrade never

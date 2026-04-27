@@ -6,6 +6,20 @@ import type {
   SlideState,
 } from '@slide-remote/protocol';
 
+// Constant-time string comparison. The token check below is the single auth
+// gate for the WS API; a length-equal byte XOR avoids leaking match progress
+// through wall-clock timing. Theoretical hardening — tokens are 128-bit
+// random, so a timing oracle wouldn't be useful in practice — but it's three
+// lines and removes the discussion.
+function tokensEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) {
+    r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return r === 0;
+}
+
 // One Durable Object per room. Mediates messages between the presenter
 // (the deck) and viewers (phones). State held in DO storage so a hibernated
 // DO wakes up with the latest snapshot.
@@ -48,7 +62,7 @@ export class RoomDO {
 
     // One room secret authenticates both presenter (deck) and viewer (phone).
     // The QR carries this token in the URL hash so it never hits server logs.
-    if (!this.presenterToken || token !== this.presenterToken) {
+    if (!this.presenterToken || !token || !tokensEqual(token, this.presenterToken)) {
       return new Response('unauthorized', { status: 401 });
     }
 
