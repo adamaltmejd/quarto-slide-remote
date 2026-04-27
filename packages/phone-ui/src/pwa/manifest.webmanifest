@@ -1,0 +1,9 @@
+{
+  "name": "slide-remote",
+  "short_name": "slide-remote",
+  "display": "standalone",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "start_url": "/",
+  "icons": []
+}
