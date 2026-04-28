@@ -124,19 +124,19 @@ describe('phone-ui render', () => {
     ui.destroy();
   });
 
-  test('elapsed timer formats startedAt and disables when undefined', () => {
+  test('timer renders "HH:MM | MM:SS" and disables when startedAt is undefined', () => {
     const ui = buildUi(noopHandlers());
     document.body.append(ui.root);
     const timer = ui.root.querySelector<HTMLButtonElement>('.sr__timer');
-    expect(timer?.textContent).toBe('--:--');
+    expect(timer?.textContent).toMatch(/^\d{2}:\d{2} \| --:--$/);
     expect(timer?.disabled).toBe(true);
 
     ui.setState(makeState({ startedAt: Date.now() - 75 * 1000 }));
     expect(timer?.disabled).toBe(false);
-    expect(timer?.textContent).toMatch(/^01:1[45]$/);
+    expect(timer?.textContent).toMatch(/^\d{2}:\d{2} \| 01:1[45]$/);
 
     ui.setState(makeState({ startedAt: undefined }));
-    expect(timer?.textContent).toBe('--:--');
+    expect(timer?.textContent).toMatch(/^\d{2}:\d{2} \| --:--$/);
     expect(timer?.disabled).toBe(true);
     ui.destroy();
   });
@@ -186,6 +186,29 @@ describe('phone-ui render', () => {
 
     ui.hideToast();
     expect(toast?.hidden).toBe(true);
+    ui.destroy();
+  });
+
+  test('header has the 3-column layout for the centered slide counter', () => {
+    // Structural check only — happy-dom doesn't run CSS layout, so visual
+    // centering is verified via the demo smoke and visual QA, not here.
+    const ui = buildUi(noopHandlers());
+    document.body.append(ui.root);
+    const top = ui.root.querySelector<HTMLElement>('.sr__top');
+    expect(top?.querySelector('.sr__top-left')).not.toBeNull();
+    expect(top?.querySelector('.sr__top-right')).not.toBeNull();
+    // pos is a direct child of .sr__top, not nested in either side group.
+    expect(ui.root.querySelector('.sr__top > .sr__pos')).not.toBeNull();
+    ui.destroy();
+  });
+
+  test('notes pane stays empty when there are no notes', () => {
+    const ui = buildUi(noopHandlers());
+    document.body.append(ui.root);
+    ui.setState(makeState({ notesHtml: undefined }));
+    const notes = ui.root.querySelector<HTMLElement>('.sr__notes');
+    expect(notes?.textContent).toBe('');
+    expect(notes?.children.length).toBe(0);
     ui.destroy();
   });
 

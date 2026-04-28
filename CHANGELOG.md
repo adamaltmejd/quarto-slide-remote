@@ -6,6 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — phone UI
+
+- **Slide position (`N / total`) centered in the header bar.** Previously
+  top-left of the body. Header is now a 3-column grid (`1fr auto 1fr`):
+  `[● status]` left, `[N / total]` centered, `[peer · room · size · ↻]`
+  right. The position sits at the true screen-center regardless of how
+  wide the side groups grow.
+- **Wall clock + elapsed timer combined** in a single row above NEXT.
+  Format: `HH:MM | MM:SS` — local 24h clock, then talk-elapsed timer.
+  Grey on the controls panel, no border, font-size matching NEXT
+  (24 px). Tap anywhere on the row resets the elapsed half; the wall
+  clock is read-only. Both removed from the header to free space.
+- **Slide title and Next: row larger.** `.sr__title-text` 22 → 28 px,
+  `.sr__next` 14 → 17 px. Readable from podium distance without
+  reaching for the phone.
+- **Empty-notes slides leave the notes pane empty** instead of
+  rendering a "No notes for this slide." placeholder. Absence of text
+  is its own signal; the placeholder reads as noise.
+
+### Documentation
+
+- **README install path reshaped.** Worker prerequisite is now stated
+  up front — `quarto add` alone isn't enough; you also need a Worker
+  URL. The shared `slide-remote.adamaltmejd.workers.dev` Worker is
+  clearly marked **evaluation only** with no support guarantees.
+  "Deploy your own Worker (recommended)" is a first-class section
+  with `bunx wrangler login` + `bun run deploy`, separated from the
+  contributor dev-loop instructions. Free Cloudflare account is
+  sufficient.
+- **README troubleshooting** updated: wake-lock no longer says
+  "v0.2 roadmap" (shipped). Test-count line generalised so it doesn't
+  drift on every release.
+
 ## [0.2.0] - 2026-04-27
 
 ### Changed — deck UI lives invisibly while paired
