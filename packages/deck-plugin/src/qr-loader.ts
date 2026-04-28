@@ -8,6 +8,11 @@
 
 type QrApi = NonNullable<Window['SlideRemoteQR']>;
 
+// Must match the basename emitted by `packages/deck-plugin/build.ts`; the
+// build script hard-codes the same string so both sides share a single
+// source of truth.
+const QR_CHUNK_FILENAME = 'slide-remote-qr.js';
+
 let cached: Promise<QrApi> | undefined;
 
 export function loadQrChunk(base: string): Promise<QrApi> {
@@ -15,7 +20,7 @@ export function loadQrChunk(base: string): Promise<QrApi> {
   if (cached) return cached;
   cached = new Promise<QrApi>((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `${base}slide-remote-qr.js`;
+    script.src = `${base}${QR_CHUNK_FILENAME}`;
     script.async = true;
     script.addEventListener('load', () => {
       if (window.SlideRemoteQR) resolve(window.SlideRemoteQR);
