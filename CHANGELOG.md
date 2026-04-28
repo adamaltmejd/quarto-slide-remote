@@ -6,11 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — landing form
+
+- **Paste-to-join form on the bare URL.** When the phone-UI is opened
+  without an `/r/{roomId}` path it used to bail with a fatal "Missing
+  room ID." It now renders a small form that accepts a pasted join
+  link or the dashed pairing code (e.g. `R12V-P138`), normalizes it,
+  and navigates to `/r/{roomId}#t={token}`. Useful when someone is
+  using a separate computer as the remote and can't easily scan the
+  QR off the deck. Pure client-side, no Worker change.
+
 ### Changed — pairing codes
 
 - **Short, typeable pairing codes.** Room IDs and tokens are now 4
-  Crockford-32 characters each (alphabet `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`,
-  no `0/O/I/L/1`), joined with a dash for display: e.g. `R12V-P138`.
+  canonical Crockford-32 characters each (alphabet
+  `0123456789ABCDEFGHJKMNPQRSTVWXYZ`, omits `I/L/O/U`), joined with a
+  dash for display: e.g. `R12V-P138`.
   Previous shape was 10-hex room + 32-hex token. The deck overlay now
   surfaces the combined `pairCode` under `Code:` so a presenter can
   read it off the screen for someone using a separate computer as the

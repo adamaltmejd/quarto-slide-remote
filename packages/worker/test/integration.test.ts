@@ -180,8 +180,8 @@ describe.skipIf(!enabled)('worker integration', () => {
 
   test('mints a room and connects presenter+viewer', async () => {
     const room = await mintRoom();
-    expect(room.roomId).toMatch(/^[A-HJKMNP-Z2-9]{4}$/);
-    expect(room.presenterToken).toMatch(/^[A-HJKMNP-Z2-9]{4}$/);
+    expect(room.roomId).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}$/);
+    expect(room.presenterToken).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}$/);
     expect(room.pairCode).toBe(`${room.roomId}-${room.presenterToken}`);
 
     const presenter = open('presenter', room);

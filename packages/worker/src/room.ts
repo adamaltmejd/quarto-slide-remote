@@ -8,9 +8,9 @@ import type {
 
 // Constant-time string comparison. The token check below is the single auth
 // gate for the WS API; a length-equal byte XOR avoids leaking match progress
-// through wall-clock timing. With 4-char Crockford-32 tokens (~20 bits) the
-// real defense is edge rate-limiting, not constant-time compare — but it's
-// three lines and removes the discussion.
+// through wall-clock timing. With 4-char Crockford-32 tokens (~20 bits each)
+// the real defense is edge rate-limiting, not constant-time compare — but
+// it's three lines and removes the discussion.
 function tokensEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0;

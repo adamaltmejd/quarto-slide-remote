@@ -1,4 +1,5 @@
 import type { Command } from '@slide-remote/protocol';
+import { buildLanding } from './landing';
 import { buildFatal, buildUi } from './render';
 import { clearSession, loadSession, saveSession } from './session';
 import { WakeLockManager } from './wake-lock';
@@ -31,8 +32,12 @@ function fatal(text: string): void {
 
 const roomId = parseRoomId();
 if (!roomId) {
-  fatal('Missing room ID. Open the link from the deck QR code.');
-  throw new Error('no room id');
+  // Bare URL — show the manual-entry form. The form parses pasted join
+  // links or typed pair codes (e.g. R12V-P138) and navigates to the
+  // /r/{roomId}#t={token} URL, which re-runs this entry script.
+  document.body.replaceChildren(buildLanding());
+  // Halt the rest of main — there's nothing to do without a room.
+  throw new Error('landing');
 }
 
 const tokenFromUrl = parseToken();
