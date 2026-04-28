@@ -37,11 +37,6 @@ describe('protocol round-trip', () => {
     expect(roundtrip(msg)).toEqual(msg);
   });
 
-  test('ClientMessage cmd with args', () => {
-    const msg: ClientMessage = { t: 'cmd', cmd: 'goto', args: { h: 2, v: 0 } };
-    expect(roundtrip(msg)).toEqual(msg);
-  });
-
   test('ServerMessage state_snapshot', () => {
     const msg: ServerMessage = {
       t: 'state_snapshot',

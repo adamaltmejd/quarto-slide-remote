@@ -5,7 +5,6 @@ export interface RevealApi {
   on(event: string, handler: (e?: unknown) => void): void;
   next(): void;
   prev(): void;
-  slide(h: number, v?: number, f?: number): void;
   togglePause(): void;
   isPaused(): boolean;
   getCurrentSlide(): HTMLElement | undefined;

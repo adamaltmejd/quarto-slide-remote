@@ -11,7 +11,7 @@
 
 export type Role = 'presenter' | 'viewer';
 
-export type Command = 'next' | 'prev' | 'goto' | 'black' | 'resetTimer';
+export type Command = 'next' | 'prev' | 'black' | 'resetTimer';
 
 export interface SlideState {
   roomId: string;
@@ -34,14 +34,14 @@ export interface SlideState {
 // What a client sends to the server.
 export type ClientMessage =
   | { t: 'state'; payload: SlideState } // presenter only
-  | { t: 'cmd'; cmd: Command; args?: unknown }; // viewer only
+  | { t: 'cmd'; cmd: Command }; // viewer only
 
 // What a client receives from the server.
 //   - viewer receives `state_snapshot` (from presenter) and `peer`/`error`
 //   - presenter receives `cmd` (forwarded from viewer) and `peer`/`error`
 export type ServerMessage =
   | { t: 'state_snapshot'; payload: SlideState; serverTs: number }
-  | { t: 'cmd'; cmd: Command; args?: unknown }
+  | { t: 'cmd'; cmd: Command }
   | { t: 'peer'; presenter: number; viewer: number }
   | { t: 'error'; code: string; msg: string };
 

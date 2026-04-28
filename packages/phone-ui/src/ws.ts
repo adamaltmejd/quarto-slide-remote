@@ -44,9 +44,9 @@ export class ViewerClient {
     this.ws?.close();
   }
 
-  send(cmd: Command, args?: unknown): boolean {
+  send(cmd: Command): boolean {
     if (this.ws?.readyState !== WebSocket.OPEN) return false;
-    const msg: ClientMessage = { t: 'cmd', cmd, args };
+    const msg: ClientMessage = { t: 'cmd', cmd };
     this.ws.send(JSON.stringify(msg));
     return true;
   }

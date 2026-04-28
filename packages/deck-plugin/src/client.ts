@@ -29,7 +29,7 @@ type RevealCommand = Exclude<Command, 'resetTimer'>;
 
 // Pure command dispatch. Exported so tests can exercise it without standing
 // up a WebSocket / fetch / mint flow.
-export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: unknown): void {
+export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand): void {
   switch (cmd) {
     case 'next':
       reveal.next();
@@ -37,11 +37,6 @@ export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: 
     case 'prev':
       reveal.prev();
       break;
-    case 'goto': {
-      const a = (args ?? {}) as { h?: number; v?: number; f?: number };
-      if (typeof a.h === 'number') reveal.slide(a.h, a.v ?? 0, a.f);
-      break;
-    }
     case 'black':
       reveal.togglePause();
       break;
@@ -149,7 +144,7 @@ export class Client {
           this.startedAt = Date.now();
           this.pumpStateSoon();
         } else {
-          applyRemoteCommand(this.reveal, msg.cmd, msg.args);
+          applyRemoteCommand(this.reveal, msg.cmd);
         }
         break;
       case 'peer':

@@ -132,13 +132,10 @@ Six low-risk items shippable as one release. Edge-swipe is split out
 into v0.5 because it carries real device-testing risk and shouldn't
 block these wins.
 
-- [ ] **Rip out `cmd: 'goto'`.** The jump-to-slide phone UI was dropped
-      from the roadmap, but the protocol union, deck-side handler, and
-      tests still carry it. Remove from `packages/protocol/src/index.ts`
-      (`Command` union + protocol test), `packages/deck-plugin/src/client.ts`
-      (the `case 'goto'` branch), and the related cases in
-      `packages/deck-plugin/src/client.test.ts`. Pure deletion; no
-      caller emits it today.
+- [x] **Rip out `cmd: 'goto'`.** Done. Also removed the unused `args`
+      field on cmd messages and `RevealApi.slide()` (only caller was
+      the goto branch). Pure deletion across protocol, deck-plugin,
+      worker, and phone-ui.
 - [ ] **Badge fade-and-flash transitions.** Today the badge is hidden
       while connected and visible (red/yellow) on
       disconnect/reconnecting/failed; transitions are instant. Add a

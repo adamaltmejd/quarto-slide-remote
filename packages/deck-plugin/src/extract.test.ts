@@ -23,7 +23,6 @@ function makeReveal(opts: {
     on: () => {},
     next: () => {},
     prev: () => {},
-    slide: () => {},
     togglePause: () => {},
     isPaused: () => opts.paused ?? false,
     getCurrentSlide: () => opts.current,

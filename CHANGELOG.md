@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed — protocol
+
+- **`cmd: 'goto'` and the `args` field on cmd messages.** The
+  jump-to-slide phone UI was dropped from the roadmap, and no caller
+  emits `goto`; the protocol union, deck-side handler, and tests all
+  carried it as dead weight. `Command` is now `'next' | 'prev' |
+  'black' | 'resetTimer'`. `RevealApi.slide()` is also gone — the only
+  caller was the goto branch. Pure deletion across protocol,
+  deck-plugin, worker, and phone-ui; no behavioral change for any
+  shipped feature.
+
 ## [0.3.1] - 2026-04-28
 
 ### Removed — phone UI

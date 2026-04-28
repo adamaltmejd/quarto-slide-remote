@@ -109,7 +109,7 @@ export class RoomDO {
       };
       this.broadcast(out, 'viewer');
     } else if (msg.t === 'cmd' && role === 'viewer') {
-      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd as Command, args: msg.args };
+      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd as Command };
       this.broadcast(out, 'presenter');
     } else {
       this.send(ws, {
