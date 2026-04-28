@@ -166,6 +166,9 @@ export class RoomDO {
     await this.state.storage.deleteAll();
     this.presenterToken = undefined;
     this.connections.clear();
+    // Reset debounce too: otherwise a re-init's bumpIdleAlarm could be
+    // skipped, leaving the freshly-wiped DO without an alarm scheduled.
+    this.lastAlarmBumpAt = 0;
   }
 
   private async bumpIdleAlarm(): Promise<void> {
