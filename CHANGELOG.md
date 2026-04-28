@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — worker
+
+- **Idle DO cleanup via alarm-driven 24h TTL.** Each `RoomDO` now
+  pushes its alarm forward on `/init`, on every WS upgrade, and on
+  every inbound message. When the alarm fires, if any WebSockets are
+  still attached the room bumps the alarm again (long talks stay
+  alive); otherwise it `deleteAll()`s its storage and resets in-memory
+  state. Bounds room-keyspace occupancy and DO storage cost without
+  depending on user behavior, and frees collided room IDs for the
+  mint loop to reuse.
+
 ### Added — landing form
 
 - **Paste-to-join form on the bare URL.** When the phone-UI is opened

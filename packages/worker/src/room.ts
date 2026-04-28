@@ -20,6 +20,13 @@ function tokensEqual(a: string, b: string): boolean {
   return r === 0;
 }
 
+// Idle TTL: how long the DO can sit with no /init, no WS upgrade, and no
+// inbound message before its storage is wiped. Bounds room-keyspace
+// occupancy and DO storage cost without depending on user behavior. On
+// every event we push the alarm forward; when it fires, if connections
+// remain we bump again, otherwise we deleteAll().
+const IDLE_TTL_MS = 24 * 60 * 60 * 1000;
+
 // One Durable Object per room. Mediates messages between the presenter
 // (the deck) and viewers (phones). State held in DO storage so a hibernated
 // DO wakes up with the latest snapshot.
@@ -54,6 +61,7 @@ export class RoomDO {
       if (this.presenterToken) return new Response('already initialized', { status: 409 });
       this.presenterToken = token;
       await this.state.storage.put('presenterToken', token);
+      await this.bumpIdleAlarm();
       return new Response('ok');
     }
 
@@ -87,6 +95,7 @@ export class RoomDO {
       }
     }
     this.broadcastPeer();
+    await this.bumpIdleAlarm();
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -122,6 +131,25 @@ export class RoomDO {
         msg: `${msg.t} not allowed for role ${role}`,
       });
     }
+    await this.bumpIdleAlarm();
+  }
+
+  // Cloudflare DO alarm callback. Wakes the DO ~IDLE_TTL_MS after the most
+  // recent activity. If connections remain (long-running talk), we just
+  // bump the alarm again. If the room is fully idle, wipe storage and
+  // in-memory state so the room ID is freed for the mint loop to reuse.
+  async alarm(): Promise<void> {
+    if (this.state.getWebSockets().length > 0) {
+      await this.bumpIdleAlarm();
+      return;
+    }
+    await this.state.storage.deleteAll();
+    this.presenterToken = undefined;
+    this.connections.clear();
+  }
+
+  private async bumpIdleAlarm(): Promise<void> {
+    await this.state.storage.setAlarm(Date.now() + IDLE_TTL_MS);
   }
 
   webSocketClose(ws: WebSocket): void {

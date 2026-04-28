@@ -149,12 +149,10 @@ block these wins.
 - [x] **Lazy-load the QR library.** Done. Split into
       `slide-remote-qr.js`, fetched via dynamic `<script>` when the
       pairing overlay opens. Main bundle 11.7 → 4.1 KB gzip.
-- [ ] **Idle DO cleanup.** Alarm-driven 24h TTL is sketched but not
-      wired in `RoomDO`; wire `state.storage.setAlarm()` and an
-      `alarm()` handler that drops the room if idle. Bounds storage
-      and DO-instance count without depending on user behavior. Defer
-      `/api/room/new` rate-limiting unless real-world traffic shows
-      mint-loop abuse — a one-line CF WAF rule then, no code change.
+- [x] **Idle DO cleanup.** Done. 24h alarm pushed forward on each
+      event; on fire, wipes storage if no WS connections remain.
+      `/api/room/new` rate-limiting deferred — wait for real-world
+      mint-loop traffic, then a CF WAF rule.
 
 ---
 
