@@ -1,4 +1,9 @@
-import type { Role, RoomCreateResponse } from '@slide-remote/protocol';
+import {
+  PAIR_ALPHABET,
+  PAIR_PART_LEN,
+  type Role,
+  type RoomCreateResponse,
+} from '@slide-remote/protocol';
 
 export { RoomDO } from './room';
 
@@ -13,19 +18,13 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Canonical Crockford-32 (omits I, L, O, U from letters; all digits kept)
-// so codes are typeable and unambiguous when read off a slide. 4 chars ≈
-// 20 bits per part — fine paired with rate-limits at the edge; the rooms+
-// tokens are ephemeral and minted per talk.
-const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-
 function genCode(): string {
-  const a = new Uint8Array(4);
+  const a = new Uint8Array(PAIR_PART_LEN);
   crypto.getRandomValues(a);
   // 256 / 32 = 8 — every alphabet position is hit by exactly 8 byte values,
   // so `b % 32` is unbiased.
   let s = '';
-  for (const b of a) s += ALPHABET[b % 32];
+  for (const b of a) s += PAIR_ALPHABET[b % PAIR_ALPHABET.length];
   return s;
 }
 

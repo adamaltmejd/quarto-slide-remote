@@ -53,3 +53,11 @@ export interface RoomCreateResponse {
   pairCode: string;
   joinUrl: string;
 }
+
+// Canonical Crockford-32: digits 0-9 plus letters A-Z minus I, L, O, U.
+// Single source of truth for the pairing-code shape — minted by the worker
+// and validated by phone-ui's landing form.
+export const PAIR_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const PAIR_PART_LEN = 4;
+export const PAIR_PART_RE = /^[0-9A-HJKMNP-TV-Z]{4}$/;
+export const PAIR_CODE_RE = /^([0-9A-HJKMNP-TV-Z]{4})-?([0-9A-HJKMNP-TV-Z]{4})$/;

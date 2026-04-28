@@ -3,11 +3,7 @@
 // (e.g. R12V-P138) on a separate computer that can't easily scan the QR.
 // Submit normalizes to /r/{roomId}#t={token} and navigates.
 
-// Canonical Crockford-32: digits 0-9 plus letters A-Z minus I, L, O, U.
-// Matches the alphabet used by the worker's room-mint endpoint.
-const CHAR = '[0-9A-HJKMNP-TV-Z]';
-const PART_RE = new RegExp(`^${CHAR}{4}$`);
-const CODE_RE = new RegExp(`^(${CHAR}{4})-?(${CHAR}{4})$`);
+import { PAIR_CODE_RE, PAIR_PART_RE } from '@slide-remote/protocol';
 
 export interface ParsedJoin {
   roomId: string;
@@ -34,13 +30,13 @@ export function parseInput(raw: string): ParsedJoin | null {
 
   if (s.includes('/R/')) {
     const m = URL_RE.exec(s);
-    if (m?.[1] && m[2] && PART_RE.test(m[1]) && PART_RE.test(m[2])) {
+    if (m?.[1] && m[2] && PAIR_PART_RE.test(m[1]) && PAIR_PART_RE.test(m[2])) {
       return { roomId: m[1], token: m[2] };
     }
     return null;
   }
 
-  const m = CODE_RE.exec(s);
+  const m = PAIR_CODE_RE.exec(s);
   if (m?.[1] && m[2]) return { roomId: m[1], token: m[2] };
   return null;
 }
