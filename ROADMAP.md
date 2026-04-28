@@ -1,24 +1,16 @@
 # Roadmap
 
-**Status:** v0.2.0 shipped 2026-04-27 at
+**Status:** v0.3.1 shipped 2026-04-28 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
-v0.3 work starts here.
+v0.4 work starts here.
 
 The MVP is functional end-to-end: deck → QR → phone → WS → Worker →
 Durable Object. Quality gates (biome lint, tsc typecheck, 84 unit tests,
 integration smoke test, 3-scenario decktape-silent invariant, 30 KB gzip
-bundle budget) run in CI on every push. The full v0.1 / v0.2 ledger — what's
-implemented, hardened, and tested — lives in [CHANGELOG.md](CHANGELOG.md).
-
----
-
-## v0.1 — open item
-
-- [ ] Switch the EC7422 course repo from `dev-install` to
-      `quarto add adamaltmejd/quarto-slide-remote@v0.1.1` and drop the
-      `_extensions/slide-remote/` entry from its `.gitignore`. Lives in
-      the consumer repo, not this one.
+bundle budget) run in CI on every push. The full v0.1 / v0.2 / v0.3
+ledger — what's implemented, hardened, and tested — lives in
+[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -29,9 +21,7 @@ alone — pick one off the list.
 
 ### Status
 
-**Shipped 2026-04-27 as v0.2.0.** All seven items below landed; the
-consumer course repo can now `quarto add …@v0.2.0` (replaces the
-v0.1.x cutover item above).
+**Shipped 2026-04-27 as v0.2.0.** All seven items below landed.
 
 1. ~~Phone UI layout overhaul (below)~~ — shipped
 2. ~~Black-screen toggle — wire the PAUSE button to `cmd: 'black'`~~ — shipped
@@ -83,7 +73,8 @@ fast-tapping. Target shape:
 
 ## v0.3 — Phone UI tightening + onboarding clarity
 
-**Status:** all six items shipped to `[Unreleased]`. Ready to tag.
+**Status:** shipped 2026-04-28 as v0.3.0 (six items) + v0.3.1 (room ID
+dropped from phone header).
 
 Cosmetic and ergonomic refinements based on real-talk usage of v0.2,
 plus install docs that don't quietly assume the user can read minds
@@ -135,7 +126,57 @@ about the Worker dependency.
 
 ---
 
-## Beyond v0.3
+## v0.4 — Cleanup, polish, perf
+
+Six low-risk items shippable as one release. Edge-swipe is split out
+into v0.5 because it carries real device-testing risk and shouldn't
+block these wins.
+
+- [ ] **Rip out `cmd: 'goto'`.** The jump-to-slide phone UI was dropped
+      from the roadmap, but the protocol union, deck-side handler, and
+      tests still carry it. Remove from `packages/protocol/src/index.ts`
+      (`Command` union + protocol test), `packages/deck-plugin/src/client.ts`
+      (the `case 'goto'` branch), and the related cases in
+      `packages/deck-plugin/src/client.test.ts`. Pure deletion; no
+      caller emits it today.
+- [ ] **Badge fade-and-flash transitions.** Today the badge is hidden
+      while connected and visible (red/yellow) on
+      disconnect/reconnecting/failed; transitions are instant. Add a
+      green "paired" flash on first connect *and* every reconnect,
+      holding for ~2.5 s then fading to invisible over ~600 ms.
+      Disconnect/failed states stay sticky red. Pure CSS-transition +
+      `setTimeout`; no protocol change. Position is already top-right
+      (collides with neither reveal.js's bottom-right `slideNumber`
+      nor a consumer's bottom-left status widgets).
+- [ ] **Haptic feedback** on `cmd` ack via `navigator.vibrate(10)`.
+      Android-only in practice — iOS Safari doesn't expose the API,
+      so the call no-ops there. Ship anyway: one line, real win on
+      Android, silent on iOS.
+- [ ] **Cache sanitized notes per slide.** `sanitizeNotesHtml` runs
+      on every `pumpStateNow`, including `fragmentshown`/`fragmenthidden`
+      events on a slide whose notes haven't changed. Add a
+      `WeakMap<Element, string>` keyed by the slide element so notes
+      are sanitized once per slide. Invalidate naturally when the deck
+      re-renders (WeakMap drops detached nodes). Worth the change for
+      note-heavy decks where sanitization shows up in the flush-state
+      hot path.
+- [ ] **Lazy-load the QR library** in `packages/deck-plugin`.
+      `qrcode-generator` (~50 KB raw, the bulk of the bundle) only runs
+      when a presenter opens the pairing overlay, but it currently parses
+      on every deck load. Move it behind a dynamic `import()` inside
+      `Overlay.open()` (or the controller's `activate()` path) so the
+      99% non-paired case pays nothing. Coordinate with the size-check
+      budget — the main bundle drops, the QR chunk loads on demand.
+- [ ] **Idle DO cleanup.** Alarm-driven 24h TTL is sketched but not
+      wired in `RoomDO`; wire `state.storage.setAlarm()` and an
+      `alarm()` handler that drops the room if idle. Bounds storage
+      and DO-instance count without depending on user behavior. Defer
+      `/api/room/new` rate-limiting unless real-world traffic shows
+      mint-loop abuse — a one-line CF WAF rule then, no code change.
+
+---
+
+## v0.5 — Edge-swipe gesture
 
 - [ ] **Edge-swipe gesture for next/prev** on the phone UI.
       Photo-app-style: a thumb swipe from the right edge inward
@@ -146,33 +187,21 @@ about the Worker dependency.
       edge); must coexist with iOS Safari's system back-swipe (start
       the recognized region a few pixels inboard so the system gesture
       still wins at the bezel). Keep the existing big NEXT button —
-      gestures supplement, they don't replace.
-- [ ] **Badge fade-and-flash transitions** (queued for ~v0.4). Today the badge is hidden while connected and visible (red/yellow) on disconnect/reconnecting/failed; transitions are instant. Add a green "paired" flash on first connect *and* every reconnect, holding for ~2.5 s then fading to invisible over ~600 ms. Disconnect/failed states stay sticky red. Pure CSS-transition + `setTimeout`; no protocol change. Position is already top-right (collides with neither reveal.js's bottom-right `slideNumber` nor a consumer's bottom-left status widgets).
-- [ ] **Jump-to-slide / overview**: phone shows the slide list (title + thumb-friendly tap targets); selecting one sends `cmd: 'goto'`. Useful when the talk goes off-script.
-- [ ] **Haptic feedback**: short tap when `cmd` is acknowledged (`navigator.vibrate` is iOS-limited; explore `expo-haptics`-style alternatives or accept Android-only).
-- [ ] **Token regeneration**: presenter shortcut (Shift+T?) to mint a new room mid-talk if a phone walked off with the old QR.
-- [ ] **Read-only viewer mode**: optional `?role=watch` for a participant who can see notes but not drive. Note that the worker doesn't currently enforce single-presenter (see protocol comment in `packages/protocol/src/index.ts`); read-only would need an actual role check in `RoomDO.webSocketMessage`.
-- [ ] **Service worker**: for offline phone-UI caching after first load. Defer until we hit a real flake; risks more than it solves.
-- [ ] **Apple Watch companion**: explicit non-goal for v0.x; revisit if the phone-as-clicker UX has friction in real talks.
-- [ ] **Telemetry**: minimal counters (rooms minted, commands sent, errors) so we can see real-world usage without storing presentation content.
-- [ ] **Idle DO cleanup**: alarm-driven 24h TTL is sketched but not wired in `RoomDO`; add it when usage justifies the cost discipline. Pairs naturally with constraining `/api/room/new` CORS.
-
-### Plugin performance
-
-- [ ] **Lazy-load the QR library** in `packages/deck-plugin`. `qrcode-generator` (~50 KB raw, the bulk of the bundle) only runs when a presenter opens the pairing overlay, but it currently parses on every deck load. Move it behind a dynamic `import()` inside `Overlay.open()` (or the controller's `activate()` path) so the 99% non-paired case pays nothing. Coordinate with the size-check budget — the main bundle drops, the QR chunk loads on demand.
-- [ ] **Cache sanitized notes per slide.** `sanitizeNotesHtml` runs on every `pumpStateNow`, including `fragmentshown`/`fragmenthidden` events on a slide whose notes haven't changed. Add a `WeakMap<Element, string>` keyed by the slide element so notes are sanitized once per slide. Invalidate naturally when the deck re-renders (WeakMap drops detached nodes). Worth the change for note-heavy decks where sanitization shows up in the flush-state hot path.
+      gestures supplement, they don't replace. Split into its own
+      release because the iOS back-swipe coexistence is real
+      engineering and the wins in v0.4 shouldn't wait on it.
 
 ---
 
 ## Risks and known issues
 
-Tracked here so we don't forget; not in any priority order. Items resolved
-in v0.1.x are dropped — see CHANGELOG for closeouts.
+Tracked here so we don't forget; not in any priority order. Items
+resolved by shipped releases are dropped — see CHANGELOG for closeouts.
 
 - **iOS Safari + Low Power Mode** drops WebSockets aggressively when the screen sleeps. The reconnect ceiling (`MAX_RECONNECT_ATTEMPTS = 60`) caps the spinner at ~15 minutes; wake lock + fast reconnect (both v0.2) help further, but the screen-off → screen-on cycle still needs explicit testing on a real device.
 - **DO SQLite + `new_sqlite_classes` migrations are one-way.** Pin compat date carefully and version any migration changes.
-- **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable for v0.1; revisit with token regeneration in Beyond.
-- **`/api/room/new` CORS** is currently `*` and unrate-limited. Fine for the current scale (the endpoint mints empty rooms; it's not abuse-worthy on its own), but constrain to the deck's origin and pair with idle DO cleanup before broader deployment.
-- **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release. v0.1.0 + v0.1.1 followed this; future releases must too.
-- **Course repo CI**: the consumer's `publish-course-material.yml` renders decks with the plugin loaded. Our own CI proves silence across 3 scenarios (decktape, missing worker-url, kill switch). Promote the consumer's check from a manual one to an asserted one when the cutover happens.
-- **Multi-presenter is unenforced**: two presenter connections to the same room means last-write-wins on snapshots. Documented in `packages/protocol/src/index.ts`; `RoomDO.webSocketMessage` would need a role check to enforce single-presenter. Relevant for Beyond/read-only-viewer.
+- **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable today.
+- **`/api/room/new` CORS** is currently `*` and unrate-limited. CORS allowlisting is a non-starter (deck origins are user-hosted Quarto sites and unknown to the Worker). Idle DO cleanup (v0.4) bounds storage; add a CF WAF rate-limit rule only if real-world traffic shows mint-loop abuse.
+- **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release. All releases through v0.3.1 followed this; future releases must too.
+- **Course repo CI**: the consumer's `publish-course-material.yml` renders decks with the plugin loaded. Our own CI proves silence across 3 scenarios (decktape, missing worker-url, kill switch). Promote the consumer's check from manual to asserted when convenient.
+- **Multi-presenter is unenforced**: two presenter connections to the same room means last-write-wins on snapshots. Documented in `packages/protocol/src/index.ts`; `RoomDO.webSocketMessage` would need a role check to enforce single-presenter. Low-impact in practice (one talk → one presenter token).
