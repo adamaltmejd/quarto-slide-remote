@@ -6,12 +6,9 @@
 // at module init in index.ts) so it works regardless of where the consumer
 // hosts the deck.
 
-type QrApi = NonNullable<Window['SlideRemoteQR']>;
+import { QR_CHUNK_FILENAME } from './qr-chunk-name';
 
-// Must match the basename emitted by `packages/deck-plugin/build.ts`; the
-// build script hard-codes the same string so both sides share a single
-// source of truth.
-const QR_CHUNK_FILENAME = 'slide-remote-qr.js';
+type QrApi = NonNullable<Window['SlideRemoteQR']>;
 
 let cached: Promise<QrApi> | undefined;
 

@@ -81,7 +81,6 @@ export class Overlay {
 
   open(joinUrl: string, pairCode: string): void {
     if (joinUrl !== this.lastJoinUrl) {
-      this.qrHost.dataset.joinUrl = joinUrl;
       this.linkEl.href = joinUrl;
       this.lastJoinUrl = joinUrl;
       void this.fillQr(joinUrl);
@@ -135,7 +134,9 @@ const PAIRED_FADE_MS = 600;
 export class StatusBadge {
   private root: HTMLDivElement;
   private textEl: HTMLSpanElement;
-  private flashTimers: ReturnType<typeof setTimeout>[] = [];
+  // The choreography schedules at most one timer at a time: the hold timer
+  // arms the fade timer only after firing, so they never coexist.
+  private flashTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     const dot = el('span', 'sr-badge__dot');
@@ -159,23 +160,20 @@ export class StatusBadge {
   }
 
   private cancelFlash(): void {
-    for (const t of this.flashTimers) clearTimeout(t);
-    this.flashTimers = [];
+    if (this.flashTimer) clearTimeout(this.flashTimer);
+    this.flashTimer = undefined;
     delete this.root.dataset.flash;
   }
 
   private flashPaired(): void {
     this.cancelFlash();
     this.root.dataset.flash = 'visible';
-    this.flashTimers.push(
-      setTimeout(() => {
-        this.root.dataset.flash = 'fading';
-        this.flashTimers.push(
-          setTimeout(() => {
-            this.root.dataset.flash = 'hidden';
-          }, PAIRED_FADE_MS),
-        );
-      }, PAIRED_HOLD_MS),
-    );
+    this.flashTimer = setTimeout(() => {
+      this.root.dataset.flash = 'fading';
+      this.flashTimer = setTimeout(() => {
+        this.root.dataset.flash = 'hidden';
+        this.flashTimer = undefined;
+      }, PAIRED_FADE_MS);
+    }, PAIRED_HOLD_MS);
   }
 }

@@ -20,6 +20,7 @@ import { mkdir, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { QR_CHUNK_FILENAME } from './src/qr-chunk-name';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -30,10 +31,6 @@ const mainOut = process.env.SLIDE_REMOTE_PLUGIN_OUT
   : defaultOut;
 const outDir = dirname(mainOut);
 const mainBasename = basename(mainOut);
-// Hard-coded so it stays in sync with qr-loader.ts's `${base}slide-remote-qr.js`
-// fetch URL. SLIDE_REMOTE_PLUGIN_OUT only controls the output directory; the
-// chunk name is part of the runtime contract, not configurable.
-const qrBasename = 'slide-remote-qr.js';
 
 const minify = process.argv.includes('--minify');
 
@@ -64,7 +61,7 @@ async function build(): Promise<void> {
   await mkdir(outDir, { recursive: true });
   await Promise.all([
     buildOne(resolve(srcDir, 'index.ts'), mainBasename),
-    buildOne(resolve(srcDir, 'qr-chunk.ts'), qrBasename),
+    buildOne(resolve(srcDir, 'qr-chunk.ts'), QR_CHUNK_FILENAME),
   ]);
 }
 
