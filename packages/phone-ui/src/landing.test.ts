@@ -56,4 +56,12 @@ describe('landing parseInput', () => {
   test('rejects garbage', () => {
     expect(parseInput('hello world')).toBeNull();
   });
+
+  test('rejects URL with leading garbage (anchored)', () => {
+    expect(parseInput('chat-msg/r/R12V#t=P138')).toBeNull();
+  });
+
+  test('rejects URL with trailing garbage (anchored)', () => {
+    expect(parseInput('https://x.example/r/R12V#t=P138-and-more')).toBeNull();
+  });
 });

@@ -14,8 +14,12 @@ export interface ParsedJoin {
 // a regex (rather than `new URL`) so origin-relative inputs like
 // `/r/R12V#t=P138` work even when the host environment doesn't have a
 // usable base URL — happy-dom in tests, but also any sandboxed iframe.
-// Allows an optional query string between the path and the hash.
-const URL_RE = /\/R\/([^/?#]+)(?:\?[^#]*)?#T=([^&]+)/;
+// Anchored on both ends so leading/trailing garbage (e.g. text pasted
+// around a URL in chat) is rejected rather than salvaged. Optional `http(s)://host`
+// prefix and optional query string between the path and the hash.
+// Token-as-query (`?t=P138`) is intentionally unsupported: every URL we
+// generate puts the token in the hash so it never hits server logs.
+const URL_RE = /^(?:HTTPS?:\/\/[^/]+)?\/R\/([^/?#]+)(?:\?[^#]*)?#T=([^&]+)$/;
 
 // Accept any of:
 //   https://host/r/R12V#t=P138   (full URL)
