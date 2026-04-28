@@ -157,7 +157,7 @@ mid-cycle.
 
 ---
 
-## v0.5 — Edge-swipe gesture
+## v0.5 — Edge-swipe gesture + overlay keyboard trap
 
 - [ ] **Edge-swipe gesture for next/prev** on the phone UI.
       Photo-app-style: a thumb swipe from the right edge inward
@@ -171,6 +171,16 @@ mid-cycle.
       gestures supplement, they don't replace. Split into its own
       release because the iOS back-swipe coexistence is real
       engineering and the wins in v0.4 shouldn't wait on it.
+- [ ] **Modal keyboard trap on the pairing overlay.** v0.4 fixed Esc
+      (capture-phase + `stopPropagation`) so close doesn't also pop
+      Reveal's overview, but Reveal's other document-level shortcuts —
+      arrows, `N`/`P`/`B`/`O`, space — still fire while the overlay is
+      mounted. The deck navigates underneath the open QR, which is
+      visible the moment a presenter taps anything by accident. Either
+      swallow all bubble-phase keydown while the overlay is attached,
+      or move focus into the overlay panel and rely on Reveal ignoring
+      events with a non-`body` target. The `aria-modal="true"` on the
+      panel already declares the intent; the runtime needs to match.
 
 ---
 
@@ -186,3 +196,5 @@ resolved by shipped releases are dropped — see CHANGELOG for closeouts.
 - **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release. All releases through v0.3.1 followed this; future releases must too.
 - **Course repo CI**: the consumer's `publish-course-material.yml` renders decks with the plugin loaded. Our own CI proves silence across 3 scenarios (decktape, missing worker-url, kill switch). Promote the consumer's check from manual to asserted when convenient.
 - **Multi-presenter is unenforced**: two presenter connections to the same room means last-write-wins on snapshots. Documented in `packages/protocol/src/index.ts`; `RoomDO.webSocketMessage` would need a role check to enforce single-presenter. Low-impact in practice (one talk → one presenter token).
+- **`Role` naming lags user-facing language**: the wire protocol still uses `viewer` for what user-facing copy now calls *remote* (since v0.4's laptop-as-remote support). Rename deferred to coincide with adding a separate read-only audience role, which would naturally take the `viewer` name. Flagged in the v0.4 changelog; do not silently rename without the audience-role landing.
+- **Bundle freshness is enforced by convention, not CI**: a contributor can change `packages/deck-plugin/src/` and forget to rebuild `_extensions/slide-remote/{slide-remote,slide-remote-qr}.js`, shipping a stale bundle to `quarto add` consumers. Add a CI step that runs the deck-plugin build and fails if the committed bundle bytes don't match — same shape as the existing size-check, but for content rather than size.
