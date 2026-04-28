@@ -119,6 +119,46 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   deck-plugin, worker, and phone-ui; no behavioral change for any
   shipped feature.
 
+### Changed — overlay copy
+
+- **"waiting for phone…" → "waiting for remote…".** The laptop-as-remote
+  landing form makes a non-phone pairing a supported path; the overlay
+  status copy now reflects that.
+
+### Hardened — worker
+
+- **Reject unknown `cmd` values.** `webSocketMessage` previously
+  forwarded any string in the `msg.cmd` field to the presenter. The
+  server now validates against the canonical `Command` set and replies
+  with a `bad_cmd` error for anything else — keeps a malicious or
+  out-of-date client from injecting arbitrary strings into the
+  presenter's command channel.
+
+### Fixed
+
+- **Overlay status now flips to "paired" once a remote attaches.** The
+  overlay's status text was driven only by the deck WS state — where
+  `connected` means "deck reached the worker," not "a remote has
+  paired." Auto-dismiss covered the common case, but a Shift+R re-open
+  after pairing showed the stale "waiting for remote…" text.
+  Controller now tracks WS status and remote-attached count separately
+  and surfaces "paired" the moment a remote attaches.
+- **Esc on the pairing overlay no longer toggles Reveal's overview.**
+  The overlay's keydown listener ran in the bubble phase, so Reveal's
+  document-level Esc binding fired too. Listener moved to the capture
+  phase with `stopPropagation`, so closing the overlay stays local.
+- **Landing URL parser rejects leading/trailing garbage around the
+  URL.** `URL_RE` was unanchored, so a chat-message paste like "see my
+  deck at https://x.example/r/R12V#t=P138" salvaged a match from the
+  substring. Anchored on both ends with an optional `https?://host`
+  prefix; only the full-URL or origin-relative shapes the QR /
+  pair-code form actually produce now match.
+- **Idle DO alarm is reliably rescheduled after a wipe.** `alarm()`
+  cleared storage and `presenterToken` but left `lastAlarmBumpAt` at
+  its prior value, so a re-init's `bumpIdleAlarm()` could be debounced
+  out and the freshly-wiped DO would have no alarm scheduled. Reset to
+  0 alongside the rest of the in-memory state.
+
 ## [0.3.1] - 2026-04-28
 
 ### Removed — phone UI
