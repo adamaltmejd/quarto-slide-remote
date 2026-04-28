@@ -1,14 +1,14 @@
 # Roadmap
 
-**Status:** v0.1.1 shipped 2026-04-27 at
+**Status:** v0.2.0 shipped 2026-04-27 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
-v0.2 work starts here.
+v0.3 work starts here.
 
 The MVP is functional end-to-end: deck → QR → phone → WS → Worker →
-Durable Object. Quality gates (biome lint, tsc typecheck, 65 unit tests,
+Durable Object. Quality gates (biome lint, tsc typecheck, 84 unit tests,
 integration smoke test, 3-scenario decktape-silent invariant, 30 KB gzip
-bundle budget) run in CI on every push. The full v0.1 ledger — what's
+bundle budget) run in CI on every push. The full v0.1 / v0.2 ledger — what's
 implemented, hardened, and tested — lives in [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -29,9 +29,9 @@ alone — pick one off the list.
 
 ### Status
 
-All seven v0.2 items have shipped to `[Unreleased]`. v0.2 is **ready
-to tag**; once tagged, the consumer course repo can `quarto add
-…@v0.2.0` (replaces the v0.1.x cutover item above).
+**Shipped 2026-04-27 as v0.2.0.** All seven items below landed; the
+consumer course repo can now `quarto add …@v0.2.0` (replaces the
+v0.1.x cutover item above).
 
 1. ~~Phone UI layout overhaul (below)~~ — shipped
 2. ~~Black-screen toggle — wire the PAUSE button to `cmd: 'black'`~~ — shipped
@@ -81,8 +81,72 @@ fast-tapping. Target shape:
 
 ---
 
-## Beyond v0.2
+## v0.3 — Phone UI tightening + onboarding clarity
 
+**Status:** all six items shipped to `[Unreleased]`. Ready to tag.
+
+Cosmetic and ergonomic refinements based on real-talk usage of v0.2,
+plus install docs that don't quietly assume the user can read minds
+about the Worker dependency.
+
+### Phone UI
+
+- [x] **Slide number into the header.** Today `1 / 5` sits at the
+      top-left of the body title row, competing with the slide title.
+      Move it into `.sr__top` (alongside the status dot, room id, and
+      size buttons) so the body block is just title + `Next:` + notes.
+- [x] **Timer relocated above NEXT.** The header timer fights for
+      space with status / peer / room / size / repair. Move it into
+      the controls block, directly above the NEXT button. Style:
+      grey text on the panel background, no border, no fill —
+      same `font-size` as the NEXT button. Tap-to-reset still applies.
+- [x] **Wall clock alongside the timer.** Format: `HH:MM | MM:SS` —
+      local 24h clock first, talk-elapsed timer second. Lets the
+      presenter glance at real time without breaking eye contact to
+      look at a watch.
+- [x] **Drop the "No notes for this slide" placeholder.** Leave the
+      notes pane empty when there are no notes; absence-of-text is its
+      own signal and the placeholder reads as noise.
+- [x] **Bump heading + `Next:` font sizes.** `.sr__title-text`
+      (currently 22 px) and `.sr__next` (currently 14 px) are sized
+      for proximity reading; readable from arm's length matters more
+      on a podium. Pick proportional bumps that don't break the
+      layout on small screens.
+
+### Onboarding / install
+
+- [x] **Streamline the README install path** for self-hosters. Today
+      the README jumps straight to `quarto add` and never makes it
+      explicit that a Cloudflare Worker has to exist somewhere for any
+      of this to work. Reshape it to:
+  1. **State up front: a Worker URL is required.** The plugin is
+     silent without one — that's a feature, but it surprises first-time
+     installers who expect `quarto add` to be sufficient.
+  2. **Offer a try-it shared Worker**
+     (`slide-remote.adamaltmejd.workers.dev`) for evaluation only.
+     Flag clearly that it's unrate-limited best-effort, may be retired
+     or restricted at any time, and is **not** intended for ongoing
+     use by other presenters.
+  3. **Promote "Deploy your own Worker" to a first-class section.**
+     Minimal `wrangler deploy` flow with a Cloudflare account, no
+     paid plan required. Today the deploy commands are mixed in with
+     the dev-loop instructions; a consumer should be able to stand
+     up their own Worker without reading the contributor docs.
+
+---
+
+## Beyond v0.3
+
+- [ ] **Edge-swipe gesture for next/prev** on the phone UI.
+      Photo-app-style: a thumb swipe from the right edge inward
+      advances the slide; left-edge inward goes back. Pure DOM
+      `pointerdown`/`pointermove`/`pointerup`, no third-party gesture
+      lib. Constraints: must not hijack scroll inside the notes pane
+      (only fire when the gesture starts within ~24 px of the screen
+      edge); must coexist with iOS Safari's system back-swipe (start
+      the recognized region a few pixels inboard so the system gesture
+      still wins at the bezel). Keep the existing big NEXT button —
+      gestures supplement, they don't replace.
 - [ ] **Badge fade-and-flash transitions** (queued for ~v0.4). Today the badge is hidden while connected and visible (red/yellow) on disconnect/reconnecting/failed; transitions are instant. Add a green "paired" flash on first connect *and* every reconnect, holding for ~2.5 s then fading to invisible over ~600 ms. Disconnect/failed states stay sticky red. Pure CSS-transition + `setTimeout`; no protocol change. Position is already top-right (collides with neither reveal.js's bottom-right `slideNumber` nor a consumer's bottom-left status widgets).
 - [ ] **Jump-to-slide / overview**: phone shows the slide list (title + thumb-friendly tap targets); selecting one sends `cmd: 'goto'`. Useful when the talk goes off-script.
 - [ ] **Haptic feedback**: short tap when `cmd` is acknowledged (`navigator.vibrate` is iOS-limited; explore `expo-haptics`-style alternatives or accept Android-only).

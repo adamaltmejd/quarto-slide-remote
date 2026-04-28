@@ -73,11 +73,17 @@ function saveNotesSizeIndex(idx: number): void {
   }
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
 function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
-  const mm = Math.floor(total / 60);
-  const ss = total % 60;
-  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+}
+
+function formatClock(now: Date): string {
+  return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 }
 
 export function buildUi(handlers: UIHandlers): UI {
@@ -86,9 +92,12 @@ export function buildUi(handlers: UIHandlers): UI {
   dot.setAttribute('aria-hidden', 'true');
   const statusEl = el('span', 'sr__status', 'connecting…');
 
-  const timerEl = el('button', 'sr__timer', '--:--');
+  const posEl = el('span', 'sr__pos');
+  posEl.setAttribute('aria-label', 'Slide position');
+
+  const timerEl = el('button', 'sr__timer', '--:-- | --:--');
   timerEl.type = 'button';
-  timerEl.setAttribute('aria-label', 'Elapsed time — tap to reset');
+  timerEl.setAttribute('aria-label', 'Wall clock and elapsed talk time — tap to reset elapsed');
   timerEl.disabled = true;
   timerEl.addEventListener('click', () => {
     handlers.onResetTimer();
@@ -113,26 +122,20 @@ export function buildUi(handlers: UIHandlers): UI {
   repairBtn.setAttribute('aria-label', 'Re-pair: scan a fresh QR');
   repairBtn.addEventListener('click', handlers.onRepair);
 
+  const topLeft = el('div', 'sr__top-left');
+  topLeft.append(dot, statusEl);
+  const topRight = el('div', 'sr__top-right');
+  topRight.append(peerEl, roomEl, sizeGroup, repairBtn);
   const top = el('header', 'sr__top');
-  top.append(
-    dot,
-    statusEl,
-    timerEl,
-    el('span', 'sr__spacer'),
-    peerEl,
-    roomEl,
-    sizeGroup,
-    repairBtn,
-  );
+  top.append(topLeft, posEl, topRight);
 
   const toastEl = el('div', 'sr__toast');
   toastEl.setAttribute('role', 'status');
   toastEl.hidden = true;
 
-  const posEl = el('span', 'sr__pos');
   const titleTextEl = el('span', 'sr__title-text', '—');
   const titleRow = el('div', 'sr__title');
-  titleRow.append(posEl, titleTextEl);
+  titleRow.append(titleTextEl);
 
   const nextLabel = el('span', 'sr__next-label', 'Next:');
   const nextEl = el('span', 'sr__next-text', '—');
@@ -173,7 +176,7 @@ export function buildUi(handlers: UIHandlers): UI {
   secondaryRow.append(prevBtn, pauseBtn);
 
   const controls = el('footer', 'sr__controls');
-  controls.append(nextBtn, secondaryRow);
+  controls.append(timerEl, nextBtn, secondaryRow);
 
   const root = el('div', 'sr');
   root.append(top, body, controls);
@@ -202,7 +205,9 @@ export function buildUi(handlers: UIHandlers): UI {
   let lastTimerText: string | undefined;
   let lastTimerDisabled: boolean | undefined;
   const renderTimer = (): void => {
-    const text = startedAt === undefined ? '--:--' : formatElapsed(Date.now() - startedAt);
+    const now = new Date();
+    const elapsed = startedAt === undefined ? '--:--' : formatElapsed(now.getTime() - startedAt);
+    const text = `${formatClock(now)} | ${elapsed}`;
     const disabled = startedAt === undefined;
     if (text !== lastTimerText) {
       timerEl.textContent = text;
@@ -213,6 +218,7 @@ export function buildUi(handlers: UIHandlers): UI {
       lastTimerDisabled = disabled;
     }
   };
+  renderTimer();
   const tickInterval = setInterval(renderTimer, 1000);
 
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -271,7 +277,7 @@ export function buildUi(handlers: UIHandlers): UI {
       }
       if (!notesRendered || s.notesHtml !== lastNotes) {
         if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
-        else notesEl.textContent = 'No notes for this slide.';
+        else notesEl.replaceChildren();
         lastNotes = s.notesHtml;
         notesRendered = true;
       }
