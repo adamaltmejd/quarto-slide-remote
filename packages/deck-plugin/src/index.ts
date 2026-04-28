@@ -17,10 +17,26 @@ const PLUGIN_BASE = ((): string => {
   return new URL('.', document.baseURI).toString();
 })();
 
-const STATUS_TEXT: Record<ClientStatus, string> = {
+// Overlay status surfaces the *pairing* lifecycle, not the deck-side WS
+// health: "connected" would otherwise show as soon as the deck's own WS
+// upgrade succeeds, before any phone has scanned the QR. Once a phone
+// pairs, the overlay auto-dismisses anyway.
+const OVERLAY_STATUS_TEXT: Record<ClientStatus, string> = {
   minting: 'minting room…',
   connecting: 'connecting…',
-  connected: 'connected',
+  connected: 'waiting for phone…',
+  reconnecting: 'reconnecting…',
+  disconnected: 'disconnected',
+  failed: 'failed',
+};
+
+// Badge status reflects the deck-side WS health (it's only attached after
+// `connected`, then governs the green flash and the sticky red on
+// disconnect/reconnecting/failed).
+const BADGE_STATUS_TEXT: Record<ClientStatus, string> = {
+  minting: 'minting room…',
+  connecting: 'connecting…',
+  connected: 'paired',
   reconnecting: 'reconnecting…',
   disconnected: 'disconnected',
   failed: 'failed',
@@ -64,9 +80,8 @@ class SlideRemoteController {
         this.badge?.setState('connected', `room ${roomId}`);
       },
       onStatus: (status) => {
-        this.overlay?.setStatus(STATUS_TEXT[status]);
-        const badgeText = status === 'connected' ? 'paired' : STATUS_TEXT[status];
-        this.badge?.setState(BADGE_STATE[status], badgeText);
+        this.overlay?.setStatus(OVERLAY_STATUS_TEXT[status]);
+        this.badge?.setState(BADGE_STATE[status], BADGE_STATUS_TEXT[status]);
       },
       onPeerCount: (_presenter, viewer) => {
         // Auto-dismiss the pairing overlay once a phone connects.
