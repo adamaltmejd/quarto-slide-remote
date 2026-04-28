@@ -146,13 +146,9 @@ block these wins.
 - [x] **Cache sanitized notes per slide.** Done. Keyed by the `<aside
       class="notes">` element rather than the slide itself — same
       WeakMap-drops-on-detach behavior, slightly tighter cache surface.
-- [ ] **Lazy-load the QR library** in `packages/deck-plugin`.
-      `qrcode-generator` (~50 KB raw, the bulk of the bundle) only runs
-      when a presenter opens the pairing overlay, but it currently parses
-      on every deck load. Move it behind a dynamic `import()` inside
-      `Overlay.open()` (or the controller's `activate()` path) so the
-      99% non-paired case pays nothing. Coordinate with the size-check
-      budget — the main bundle drops, the QR chunk loads on demand.
+- [x] **Lazy-load the QR library.** Done. Split into
+      `slide-remote-qr.js`, fetched via dynamic `<script>` when the
+      pairing overlay opens. Main bundle 11.7 → 4.1 KB gzip.
 - [ ] **Idle DO cleanup.** Alarm-driven 24h TTL is sketched but not
       wired in `RoomDO`; wire `state.storage.setAlarm()` and an
       `alarm()` handler that drops the room if idle. Bounds storage

@@ -1,7 +1,7 @@
 // Pairing overlay shown on the deck. Self-scoped under .sr-* so it cannot
 // collide with theme styles. Visible only after presenter activation.
 
-import { qrSvg } from './qr';
+import { loadQrChunk } from './qr-loader';
 
 export interface OverlayHandlers {
   onClose: () => void;
@@ -34,7 +34,10 @@ export class Overlay {
   private lastJoinUrl?: string;
   private onKeydown: (e: KeyboardEvent) => void;
 
-  constructor(handlers: OverlayHandlers) {
+  constructor(
+    private pluginBase: string,
+    handlers: OverlayHandlers,
+  ) {
     this.qrHost = el('div', 'sr-overlay__qr');
     this.codeEl = el('span', 'sr-overlay__code');
     this.statusEl = el('span', 'sr-overlay__status', 'connecting…');
@@ -80,15 +83,32 @@ export class Overlay {
 
   open(joinUrl: string, roomId: string): void {
     if (joinUrl !== this.lastJoinUrl) {
-      this.qrHost.innerHTML = qrSvg(joinUrl, 256);
       this.qrHost.dataset.joinUrl = joinUrl;
       this.linkEl.href = joinUrl;
       this.lastJoinUrl = joinUrl;
+      void this.fillQr(joinUrl);
     }
     this.codeEl.textContent = roomId;
     if (!this.root.isConnected) {
       document.body.appendChild(this.root);
       document.addEventListener('keydown', this.onKeydown);
+    }
+  }
+
+  private async fillQr(joinUrl: string): Promise<void> {
+    try {
+      const qr = await loadQrChunk(this.pluginBase);
+      // Guard against rapid re-opens with a different joinUrl: the chunk may
+      // have started loading for an earlier URL. Only render if we're still
+      // showing the URL that kicked off this load.
+      if (joinUrl === this.lastJoinUrl) {
+        this.qrHost.innerHTML = qr.svg(joinUrl, 256);
+      }
+    } catch (e) {
+      console.error('[slide-remote] QR load failed:', e);
+      if (joinUrl === this.lastJoinUrl) {
+        this.qrHost.textContent = 'Could not load QR — open the link below.';
+      }
     }
   }
 

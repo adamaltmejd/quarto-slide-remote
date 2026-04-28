@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — deck plugin bundle
+
+- **QR library lazy-loaded as a separate chunk.** `qrcode-generator`
+  (~50 KB raw, the bulk of the previous bundle) now lives in
+  `slide-remote-qr.js`, fetched via dynamic `<script>` only when the
+  presenter opens the pairing overlay. The main bundle dropped from
+  11.7 KB → 4.1 KB gzip, so the 99% non-paired case (decktape, regular
+  audience load) no longer pays the QR library's parse cost. The
+  Quarto extension manifest is unchanged — both files ship in
+  `_extensions/slide-remote/`, only the main file is referenced.
+
 ### Changed — deck-side badge
 
 - **Green "paired" flash on connect and every reconnect.** The
