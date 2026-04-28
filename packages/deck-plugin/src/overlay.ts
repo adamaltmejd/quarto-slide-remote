@@ -75,7 +75,14 @@ export class Overlay {
     });
 
     this.onKeydown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') handlers.onClose();
+      if (e.key !== 'Escape') return;
+      // Reveal also binds Escape on document (toggles overview). We register
+      // in the capture phase so this handler runs first; stopPropagation
+      // then prevents Reveal's bubble-phase handler from firing, so closing
+      // the overlay doesn't also pop the deck into overview mode.
+      e.preventDefault();
+      e.stopPropagation();
+      handlers.onClose();
     };
   }
 
@@ -88,7 +95,7 @@ export class Overlay {
     this.codeEl.textContent = pairCode;
     if (!this.root.isConnected) {
       document.body.appendChild(this.root);
-      document.addEventListener('keydown', this.onKeydown);
+      document.addEventListener('keydown', this.onKeydown, true);
     }
   }
 
@@ -111,7 +118,7 @@ export class Overlay {
 
   close(): void {
     if (!this.root.isConnected) return;
-    document.removeEventListener('keydown', this.onKeydown);
+    document.removeEventListener('keydown', this.onKeydown, true);
     this.root.remove();
   }
 
