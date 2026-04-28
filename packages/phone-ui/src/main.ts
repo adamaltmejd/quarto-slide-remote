@@ -62,7 +62,6 @@ const ui = buildUi({
   },
 });
 document.body.replaceChildren(ui.root);
-ui.setRoom(roomId);
 
 // Track previous status so we can surface transitions (rather than absolute
 // state) via the toast — the persistent dot already covers absolute state.

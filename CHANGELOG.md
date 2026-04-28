@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed — phone UI
+
+- **Room ID dropped from the phone header.** With the deck UI invisible
+  while paired (since v0.2), there's nothing on the laptop to verify
+  the room ID against during a talk; the URL hash carries the
+  reconnect token, and the `↻` button is the recovery path if pairing
+  goes wrong. The on-phone display was leftover noise that competed
+  visually with the centered slide counter (both monospace, both grey,
+  same band). Internal `roomId` plumbing is unchanged — the WS still
+  uses it, the deck-side QR overlay still shows it during pairing.
+
 ## [0.3.0] - 2026-04-28
 
 ### Changed — phone UI

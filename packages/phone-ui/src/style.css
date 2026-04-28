@@ -87,10 +87,6 @@ body {
 .sr__peer:empty {
   display: none;
 }
-.sr__room {
-  font-family: var(--sr-mono);
-  color: #888;
-}
 
 .sr__pos {
   font-family: var(--sr-mono);

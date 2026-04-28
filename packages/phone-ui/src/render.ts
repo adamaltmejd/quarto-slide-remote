@@ -6,7 +6,6 @@ export type { ViewerStatus };
 export interface UI {
   root: HTMLElement;
   setStatus(text: string, state: ViewerStatus): void;
-  setRoom(roomId: string): void;
   setPeerCount(presenter: number, viewer: number): void;
   setState(s: SlideState): void;
   showError(msg: string): void;
@@ -103,8 +102,6 @@ export function buildUi(handlers: UIHandlers): UI {
     handlers.onResetTimer();
   });
 
-  const roomEl = el('span', 'sr__room');
-  roomEl.setAttribute('aria-label', 'Room');
   const peerEl = el('span', 'sr__peer', '');
   peerEl.setAttribute('aria-label', 'Phones in room');
 
@@ -125,7 +122,7 @@ export function buildUi(handlers: UIHandlers): UI {
   const topLeft = el('div', 'sr__top-left');
   topLeft.append(dot, statusEl);
   const topRight = el('div', 'sr__top-right');
-  topRight.append(peerEl, roomEl, sizeGroup, repairBtn);
+  topRight.append(peerEl, sizeGroup, repairBtn);
   const top = el('header', 'sr__top');
   top.append(topLeft, posEl, topRight);
 
@@ -255,9 +252,6 @@ export function buildUi(handlers: UIHandlers): UI {
       dot.dataset.state = state;
       statusEl.textContent = text;
       root.dataset.connection = state;
-    },
-    setRoom(roomId) {
-      roomEl.textContent = roomId.slice(0, 6);
     },
     setPeerCount(_presenter, viewer) {
       peerEl.textContent = viewer > 1 ? `${viewer} phones` : '';
