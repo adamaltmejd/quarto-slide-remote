@@ -109,9 +109,19 @@ export class Overlay {
 
 // Tiny non-blocking status badge in the corner once paired, so the presenter
 // always sees connection state without the full overlay.
+//
+// Flash choreography for the 'connected' state: the badge's steady-state is
+// invisible (the deck looks untouched). Every entry into 'connected' — first
+// pair *and* every reconnect — is celebrated by a green flash held for
+// PAIRED_HOLD_MS, then fading to invisible over PAIRED_FADE_MS. Disconnect /
+// reconnecting / failed states stay sticky-visible until they resolve.
+const PAIRED_HOLD_MS = 2500;
+const PAIRED_FADE_MS = 600;
+
 export class StatusBadge {
   private root: HTMLDivElement;
   private textEl: HTMLSpanElement;
+  private flashTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
     const dot = el('span', 'sr-badge__dot');
@@ -127,5 +137,31 @@ export class StatusBadge {
   setState(state: 'connected' | 'reconnecting' | 'disconnected', text: string): void {
     this.root.dataset.state = state;
     this.textEl.textContent = text;
+    if (state === 'connected') {
+      this.flashPaired();
+    } else {
+      this.cancelFlash();
+    }
+  }
+
+  private cancelFlash(): void {
+    for (const t of this.flashTimers) clearTimeout(t);
+    this.flashTimers = [];
+    delete this.root.dataset.flash;
+  }
+
+  private flashPaired(): void {
+    this.cancelFlash();
+    this.root.dataset.flash = 'visible';
+    this.flashTimers.push(
+      setTimeout(() => {
+        this.root.dataset.flash = 'fading';
+        this.flashTimers.push(
+          setTimeout(() => {
+            this.root.dataset.flash = 'hidden';
+          }, PAIRED_FADE_MS),
+        );
+      }, PAIRED_HOLD_MS),
+    );
   }
 }

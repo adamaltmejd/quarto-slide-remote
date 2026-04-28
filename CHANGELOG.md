@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — deck-side badge
+
+- **Green "paired" flash on connect and every reconnect.** The
+  top-right status badge used to stay invisible while connected (and
+  visible/red on disconnect). Now every entry into 'connected' — first
+  pair *and* every reconnect — surfaces briefly in green, holds for
+  2.5s, then fades to invisible over 600ms. Disconnect / reconnecting
+  / failed states still stay sticky-visible until they resolve. Pure
+  CSS-transition + setTimeout; no protocol change.
+
 ### Changed — deck plugin
 
 - **Notes sanitization is cached per aside element.** `sanitizeNotesHtml`

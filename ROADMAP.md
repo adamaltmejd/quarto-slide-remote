@@ -136,15 +136,10 @@ block these wins.
       field on cmd messages and `RevealApi.slide()` (only caller was
       the goto branch). Pure deletion across protocol, deck-plugin,
       worker, and phone-ui.
-- [ ] **Badge fade-and-flash transitions.** Today the badge is hidden
-      while connected and visible (red/yellow) on
-      disconnect/reconnecting/failed; transitions are instant. Add a
-      green "paired" flash on first connect *and* every reconnect,
-      holding for ~2.5 s then fading to invisible over ~600 ms.
-      Disconnect/failed states stay sticky red. Pure CSS-transition +
-      `setTimeout`; no protocol change. Position is already top-right
-      (collides with neither reveal.js's bottom-right `slideNumber`
-      nor a consumer's bottom-left status widgets).
+- [x] **Badge fade-and-flash transitions.** Done. Green flash on every
+      entry into 'connected' (first pair + reconnects), 2.5s hold then
+      600ms fade to invisible. Disconnect/reconnecting/failed states
+      still stay sticky-visible.
 - [x] **Haptic feedback** on `cmd` ack via `navigator.vibrate(10)`.
       Done. Buzzes only when the WS actually accepted the message;
       iOS Safari no-ops silently via optional chaining.
