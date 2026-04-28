@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-04-28
+
 ### Removed — phone UI
 
 - **Room ID dropped from the phone header.** With the deck UI invisible
