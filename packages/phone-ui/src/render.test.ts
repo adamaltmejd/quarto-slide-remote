@@ -189,13 +189,15 @@ describe('phone-ui render', () => {
     ui.destroy();
   });
 
-  test('slide position is centered in the header (true 3-column layout)', () => {
+  test('header has the 3-column layout for the centered slide counter', () => {
+    // Structural check only — happy-dom doesn't run CSS layout, so visual
+    // centering is verified via the demo smoke and visual QA, not here.
     const ui = buildUi(noopHandlers());
     document.body.append(ui.root);
     const top = ui.root.querySelector<HTMLElement>('.sr__top');
     expect(top?.querySelector('.sr__top-left')).not.toBeNull();
     expect(top?.querySelector('.sr__top-right')).not.toBeNull();
-    // pos is a direct child of .sr__top, not nested in either side group
+    // pos is a direct child of .sr__top, not nested in either side group.
     expect(ui.root.querySelector('.sr__top > .sr__pos')).not.toBeNull();
     ui.destroy();
   });

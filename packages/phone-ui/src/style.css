@@ -1,6 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --sr-mono: ui-monospace, SF Mono, Menlo, monospace;
 }
 
 html,
@@ -36,9 +37,12 @@ body {
 
 .sr__top {
   /* Three columns so the slide counter sits at true screen-center,
-     independent of how wide the left or right groups grow. */
+     independent of how wide the left or right groups grow.
+     `minmax(0, 1fr)` (vs. plain `1fr`) lets the side columns shrink
+     below their content width on narrow phones, so an over-wide side
+     group can't push the centered column off-axis. */
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
@@ -84,20 +88,12 @@ body {
   display: none;
 }
 .sr__room {
-  font-family:
-    ui-monospace,
-    SF Mono,
-    Menlo,
-    monospace;
+  font-family: var(--sr-mono);
   color: #888;
 }
 
 .sr__pos {
-  font-family:
-    ui-monospace,
-    SF Mono,
-    Menlo,
-    monospace;
+  font-family: var(--sr-mono);
   color: #888;
   font-size: 12px;
   letter-spacing: 0.04em;
@@ -149,11 +145,7 @@ body {
   border: none;
   background: transparent;
   color: #6a6a6a;
-  font-family:
-    ui-monospace,
-    SF Mono,
-    Menlo,
-    monospace;
+  font-family: var(--sr-mono);
   /* Match .sr__btn--next so the elapsed timer reads as a peer of NEXT,
      not a control that needs a frame around it. */
   font-size: 24px;
@@ -218,7 +210,6 @@ body {
   /* Long unbroken tokens (URLs, identifiers) wrap instead of overflowing. */
   word-break: break-word;
   overflow-wrap: anywhere;
-  /* Subtle inner top fade hint that there's more above when scrolled. */
   padding-bottom: 12px;
 }
 .sr__notes code {
@@ -226,11 +217,7 @@ body {
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 0.9em;
-  font-family:
-    ui-monospace,
-    SF Mono,
-    Menlo,
-    monospace;
+  font-family: var(--sr-mono);
 }
 .sr__notes pre {
   /* Code blocks scroll horizontally inside the notes panel rather than

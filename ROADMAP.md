@@ -124,7 +124,7 @@ about the Worker dependency.
      installers who expect `quarto add` to be sufficient.
   2. **Offer a try-it shared Worker**
      (`slide-remote.adamaltmejd.workers.dev`) for evaluation only.
-     Flag clearly that it's unrate-limited best-effort, may be retired
+     Flag clearly that it's not rate-limited and is best-effort, may be retired
      or restricted at any time, and is **not** intended for ongoing
      use by other presenters.
   3. **Promote "Deploy your own Worker" to a first-class section.**

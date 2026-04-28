@@ -23,7 +23,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reaching for the phone.
 - **Empty-notes slides leave the notes pane empty** instead of
   rendering a "No notes for this slide." placeholder. Absence of text
-  is its own signal; the placeholder read as noise.
+  is its own signal; the placeholder reads as noise.
 
 ### Documentation
 

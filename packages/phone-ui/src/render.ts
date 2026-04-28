@@ -134,8 +134,6 @@ export function buildUi(handlers: UIHandlers): UI {
   toastEl.hidden = true;
 
   const titleTextEl = el('span', 'sr__title-text', '—');
-  const titleRow = el('div', 'sr__title');
-  titleRow.append(titleTextEl);
 
   const nextLabel = el('span', 'sr__next-label', 'Next:');
   const nextEl = el('span', 'sr__next-text', '—');
@@ -143,7 +141,7 @@ export function buildUi(handlers: UIHandlers): UI {
   nextRow.append(nextLabel, nextEl);
 
   const titleBlock = el('div', 'sr__head');
-  titleBlock.append(titleRow, nextRow);
+  titleBlock.append(titleTextEl, nextRow);
 
   const notesEl = el('div', 'sr__notes');
   notesEl.setAttribute('aria-live', 'polite');
@@ -246,7 +244,6 @@ export function buildUi(handlers: UIHandlers): UI {
   };
 
   let lastNotes: string | undefined;
-  let notesRendered = false;
   const destroy = (): void => {
     clearInterval(tickInterval);
     clearToastTimer();
@@ -275,14 +272,13 @@ export function buildUi(handlers: UIHandlers): UI {
         nextEl.textContent = '';
         nextRow.hidden = true;
       }
-      if (!notesRendered || s.notesHtml !== lastNotes) {
+      if (s.notesHtml !== lastNotes) {
         if (s.notesHtml) notesEl.innerHTML = s.notesHtml;
         else notesEl.replaceChildren();
         lastNotes = s.notesHtml;
-        notesRendered = true;
       }
       const paused = s.isPaused === true;
-      const pausedStr = paused ? 'true' : 'false';
+      const pausedStr = String(paused);
       pauseBtn.dataset.active = pausedStr;
       pauseBtn.setAttribute('aria-pressed', pausedStr);
       pauseBtn.textContent = paused ? 'RESUME' : 'PAUSE';

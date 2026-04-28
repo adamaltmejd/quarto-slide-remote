@@ -39,7 +39,7 @@ slide-remote:
   worker-url: https://slide-remote.adamaltmejd.workers.dev
 ```
 
-This is best-effort, unrate-limited, and **not a service** — it may be
+This is best-effort, not rate-limited, and **not a service** — it may be
 retired, restricted, throttled, or migrated at any time, with no
 notice. **Do not rely on it for real talks.** If you find the project
 useful, deploy your own Worker (path B); it's a few minutes of work.
