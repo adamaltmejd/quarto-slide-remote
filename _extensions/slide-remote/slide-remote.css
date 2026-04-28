@@ -135,9 +135,25 @@
   user-select: none;
 }
 /* Steady-state when paired: stay invisible so the deck looks untouched.
-   Disconnect/reconnect/failed states still surface (different data-state). */
+   Disconnect/reconnect/failed states still surface (different data-state).
+   The 'data-flash' attribute drives the green paired-flash on each entry
+   into 'connected' — see StatusBadge.flashPaired() for the choreography. */
 .sr-badge[data-state="connected"] {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.sr-badge[data-state="connected"][data-flash="visible"] {
+  opacity: 1;
+  visibility: visible;
+}
+.sr-badge[data-state="connected"][data-flash="fading"] {
+  opacity: 0;
+  visibility: visible;
+  transition: opacity 600ms ease;
+}
+.sr-badge[data-state="connected"][data-flash="hidden"] {
+  opacity: 0;
+  visibility: hidden;
 }
 .sr-badge__dot {
   width: 8px;

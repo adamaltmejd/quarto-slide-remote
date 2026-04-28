@@ -6,6 +6,159 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-28
+
+### Added — worker
+
+- **Idle DO cleanup via alarm-driven 24h TTL.** Each `RoomDO` now
+  pushes its alarm forward on `/init`, on every WS upgrade, and on
+  every inbound message. When the alarm fires, if any WebSockets are
+  still attached the room bumps the alarm again (long talks stay
+  alive); otherwise it `deleteAll()`s its storage and resets in-memory
+  state. Bounds room-keyspace occupancy and DO storage cost without
+  depending on user behavior, and frees collided room IDs for the
+  mint loop to reuse.
+
+### Added — landing form
+
+- **Paste-to-join form on the bare URL.** When the phone-UI is opened
+  without an `/r/{roomId}` path it used to bail with a fatal "Missing
+  room ID." It now renders a small form that accepts a pasted join
+  link or the dashed pairing code (e.g. `R12V-P138`), normalizes it,
+  and navigates to `/r/{roomId}#t={token}`. Useful when someone is
+  using a separate computer as the remote and can't easily scan the
+  QR off the deck. Pure client-side, no Worker change.
+
+### Changed — pairing codes
+
+- **Short, typeable pairing codes.** Room IDs and tokens are now 4
+  canonical Crockford-32 characters each (alphabet
+  `0123456789ABCDEFGHJKMNPQRSTVWXYZ`, omits `I/L/O/U`), joined with a
+  dash for display: e.g. `R12V-P138`.
+  Previous shape was 10-hex room + 32-hex token. The deck overlay now
+  surfaces the combined `pairCode` under `Code:` so a presenter can
+  read it off the screen for someone using a separate computer as the
+  remote. Entropy drops from 168 bits to 40 bits combined; the practical
+  defense moves to edge rate-limits on `/api/ws` (a v0.4 Beyond item if
+  real-world abuse appears).
+
+  Mint endpoint now retries up to 10 times against the new 1M-code
+  keyspace if the chosen room ID collides with an active DO; the
+  `RoomDO` `/init` route returns 409 on re-init to drive the loop.
+  `RoomCreateResponse` gains a `pairCode` field — `${roomId}-${presenterToken}`
+  — so clients don't have to reconstruct it.
+
+  Roles renamed for clarity in the conversation around manual entry
+  (no protocol change yet): the slide window is the *presenter*, the
+  phone or laptop driving it is the *remote*, and a future read-only
+  audience role would be the *viewer*. The `Role` union still uses
+  `viewer` for what is now called *remote*; rename deferred until the
+  audience role lands.
+
+### Removed — pairing overlay
+
+- **"Phones" peer-count row.** The overlay's "Phones: N" line was
+  noise: the overlay auto-dismisses the moment a phone connects, so
+  the count was almost always 0 right before close. Internal
+  auto-dismiss-on-pair logic is unchanged; only the visible row and
+  the now-unused `setPeerCount` API are gone.
+- **"Scan with your iPhone camera" hint copy.** The QR icon already
+  says what to do; iOS camera-scan is the only working path on most
+  current phones, so the hint was both obvious and slightly wrong on
+  Android (Lens / built-in scanner does it). Hint now reads "Press
+  Esc to dismiss."
+
+### Changed — deck plugin bundle
+
+- **QR library lazy-loaded as a separate chunk.** `qrcode-generator`
+  (~50 KB raw, the bulk of the previous bundle) now lives in
+  `slide-remote-qr.js`, fetched via dynamic `<script>` only when the
+  presenter opens the pairing overlay. The main bundle dropped from
+  11.7 KB → 4.1 KB gzip, so the 99% non-paired case (decktape, regular
+  audience load) no longer pays the QR library's parse cost. The
+  Quarto extension manifest is unchanged — both files ship in
+  `_extensions/slide-remote/`, only the main file is referenced.
+
+### Changed — deck-side badge
+
+- **Green "paired" flash on connect and every reconnect.** The
+  top-right status badge used to stay invisible while connected (and
+  visible/red on disconnect). Now every entry into 'connected' — first
+  pair *and* every reconnect — surfaces briefly in green, holds for
+  2.5s, then fades to invisible over 600ms. Disconnect / reconnecting
+  / failed states still stay sticky-visible until they resolve. Pure
+  CSS-transition + setTimeout; no protocol change.
+
+### Changed — deck plugin
+
+- **Notes sanitization is cached per aside element.** `sanitizeNotesHtml`
+  used to run on every `pumpStateNow` — including the many
+  `fragmentshown`/`fragmenthidden` events fired while a slide's notes
+  DOM is unchanged. Notes are now cached in a module-level
+  `WeakMap<Element, string>` keyed by the `<aside class="notes">`
+  element, so each aside is sanitized at most once. The WeakMap drops
+  detached nodes naturally when the deck re-renders. Assumes notes DOM
+  is static post-render (true for Quarto-rendered decks).
+
+### Added — phone UI
+
+- **Haptic feedback on cmd send.** Tapping NEXT / PREV / PAUSE / timer-reset
+  now triggers `navigator.vibrate(10)` if and only if the WebSocket
+  actually accepted the message — an offline tap doesn't fake-confirm.
+  Android-only in practice; iOS Safari leaves `navigator.vibrate`
+  undefined and the optional call no-ops silently.
+
+### Removed — protocol
+
+- **`cmd: 'goto'` and the `args` field on cmd messages.** The
+  jump-to-slide phone UI was dropped from the roadmap, and no caller
+  emits `goto`; the protocol union, deck-side handler, and tests all
+  carried it as dead weight. `Command` is now `'next' | 'prev' |
+  'black' | 'resetTimer'`. `RevealApi.slide()` is also gone — the only
+  caller was the goto branch. Pure deletion across protocol,
+  deck-plugin, worker, and phone-ui; no behavioral change for any
+  shipped feature.
+
+### Changed — overlay copy
+
+- **"waiting for phone…" → "waiting for remote…".** The laptop-as-remote
+  landing form makes a non-phone pairing a supported path; the overlay
+  status copy now reflects that.
+
+### Hardened — worker
+
+- **Reject unknown `cmd` values.** `webSocketMessage` previously
+  forwarded any string in the `msg.cmd` field to the presenter. The
+  server now validates against the canonical `Command` set and replies
+  with a `bad_cmd` error for anything else — keeps a malicious or
+  out-of-date client from injecting arbitrary strings into the
+  presenter's command channel.
+
+### Fixed
+
+- **Overlay status now flips to "paired" once a remote attaches.** The
+  overlay's status text was driven only by the deck WS state — where
+  `connected` means "deck reached the worker," not "a remote has
+  paired." Auto-dismiss covered the common case, but a Shift+R re-open
+  after pairing showed the stale "waiting for remote…" text.
+  Controller now tracks WS status and remote-attached count separately
+  and surfaces "paired" the moment a remote attaches.
+- **Esc on the pairing overlay no longer toggles Reveal's overview.**
+  The overlay's keydown listener ran in the bubble phase, so Reveal's
+  document-level Esc binding fired too. Listener moved to the capture
+  phase with `stopPropagation`, so closing the overlay stays local.
+- **Landing URL parser rejects leading/trailing garbage around the
+  URL.** `URL_RE` was unanchored, so a chat-message paste like "see my
+  deck at https://x.example/r/R12V#t=P138" salvaged a match from the
+  substring. Anchored on both ends with an optional `https?://host`
+  prefix; only the full-URL or origin-relative shapes the QR /
+  pair-code form actually produce now match.
+- **Idle DO alarm is reliably rescheduled after a wipe.** `alarm()`
+  cleared storage and `presenterToken` but left `lastAlarmBumpAt` at
+  its prior value, so a re-init's `bumpIdleAlarm()` could be debounced
+  out and the freshly-wiped DO would have no alarm scheduled. Reset to
+  0 alongside the rest of the in-memory state.
+
 ## [0.3.1] - 2026-04-28
 
 ### Removed — phone UI

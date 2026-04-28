@@ -11,7 +11,7 @@
 
 export type Role = 'presenter' | 'viewer';
 
-export type Command = 'next' | 'prev' | 'goto' | 'black' | 'resetTimer';
+export type Command = 'next' | 'prev' | 'black' | 'resetTimer';
 
 export interface SlideState {
   roomId: string;
@@ -34,19 +34,30 @@ export interface SlideState {
 // What a client sends to the server.
 export type ClientMessage =
   | { t: 'state'; payload: SlideState } // presenter only
-  | { t: 'cmd'; cmd: Command; args?: unknown }; // viewer only
+  | { t: 'cmd'; cmd: Command }; // viewer only
 
 // What a client receives from the server.
 //   - viewer receives `state_snapshot` (from presenter) and `peer`/`error`
 //   - presenter receives `cmd` (forwarded from viewer) and `peer`/`error`
 export type ServerMessage =
   | { t: 'state_snapshot'; payload: SlideState; serverTs: number }
-  | { t: 'cmd'; cmd: Command; args?: unknown }
+  | { t: 'cmd'; cmd: Command }
   | { t: 'peer'; presenter: number; viewer: number }
   | { t: 'error'; code: string; msg: string };
 
 export interface RoomCreateResponse {
   roomId: string;
   presenterToken: string;
+  // Display-friendly combined code, e.g. "R12V-P138". roomId-presenterToken
+  // joined with a dash. Computed server-side so clients don't have to.
+  pairCode: string;
   joinUrl: string;
 }
+
+// Canonical Crockford-32: digits 0-9 plus letters A-Z minus I, L, O, U.
+// Single source of truth for the pairing-code shape — minted by the worker
+// and validated by phone-ui's landing form.
+export const PAIR_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const PAIR_PART_LEN = 4;
+export const PAIR_PART_RE = /^[0-9A-HJKMNP-TV-Z]{4}$/;
+export const PAIR_CODE_RE = /^([0-9A-HJKMNP-TV-Z]{4})-?([0-9A-HJKMNP-TV-Z]{4})$/;

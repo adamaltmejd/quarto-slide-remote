@@ -1,7 +1,7 @@
 // Pairing overlay shown on the deck. Self-scoped under .sr-* so it cannot
 // collide with theme styles. Visible only after presenter activation.
 
-import { qrSvg } from './qr';
+import { loadQrChunk } from './qr-loader';
 
 export interface OverlayHandlers {
   onClose: () => void;
@@ -28,17 +28,18 @@ export class Overlay {
   private root: HTMLDivElement;
   private qrHost: HTMLDivElement;
   private statusEl: HTMLSpanElement;
-  private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
   private linkEl: HTMLAnchorElement;
   private lastJoinUrl?: string;
   private onKeydown: (e: KeyboardEvent) => void;
 
-  constructor(handlers: OverlayHandlers) {
+  constructor(
+    private pluginBase: string,
+    handlers: OverlayHandlers,
+  ) {
     this.qrHost = el('div', 'sr-overlay__qr');
     this.codeEl = el('span', 'sr-overlay__code');
     this.statusEl = el('span', 'sr-overlay__status', 'connecting…');
-    this.peerEl = el('span', 'sr-overlay__peer', '0');
 
     const closeBtn = el('button', 'sr-overlay__close', '×');
     closeBtn.type = 'button';
@@ -46,7 +47,7 @@ export class Overlay {
     closeBtn.addEventListener('click', handlers.onClose);
 
     const meta = el('div', 'sr-overlay__meta');
-    meta.append(row('Room', this.codeEl), row('Status', this.statusEl), row('Phones', this.peerEl));
+    meta.append(row('Code', this.codeEl), row('Status', this.statusEl));
 
     // Plain-text fallback for users without a phone camera, and a quick way
     // to open the phone UI in a second browser window for a laptop-only test.
@@ -64,7 +65,7 @@ export class Overlay {
       this.qrHost,
       meta,
       this.linkEl,
-      el('p', 'sr-overlay__hint', 'Scan with your iPhone camera. Press Esc to dismiss.'),
+      el('p', 'sr-overlay__hint', 'Press Esc to dismiss.'),
     );
 
     this.root = el('div', 'sr-overlay');
@@ -74,44 +75,75 @@ export class Overlay {
     });
 
     this.onKeydown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') handlers.onClose();
+      if (e.key !== 'Escape') return;
+      // Reveal also binds Escape on document (toggles overview). We register
+      // in the capture phase so this handler runs first; stopPropagation
+      // then prevents Reveal's bubble-phase handler from firing, so closing
+      // the overlay doesn't also pop the deck into overview mode.
+      e.preventDefault();
+      e.stopPropagation();
+      handlers.onClose();
     };
   }
 
-  open(joinUrl: string, roomId: string): void {
+  open(joinUrl: string, pairCode: string): void {
     if (joinUrl !== this.lastJoinUrl) {
-      this.qrHost.innerHTML = qrSvg(joinUrl, 256);
-      this.qrHost.dataset.joinUrl = joinUrl;
       this.linkEl.href = joinUrl;
       this.lastJoinUrl = joinUrl;
+      void this.fillQr(joinUrl);
     }
-    this.codeEl.textContent = roomId;
+    this.codeEl.textContent = pairCode;
     if (!this.root.isConnected) {
       document.body.appendChild(this.root);
-      document.addEventListener('keydown', this.onKeydown);
+      document.addEventListener('keydown', this.onKeydown, true);
+    }
+  }
+
+  private async fillQr(joinUrl: string): Promise<void> {
+    try {
+      const qr = await loadQrChunk(this.pluginBase);
+      // Guard against rapid re-opens with a different joinUrl: the chunk may
+      // have started loading for an earlier URL. Only render if we're still
+      // showing the URL that kicked off this load.
+      if (joinUrl === this.lastJoinUrl) {
+        this.qrHost.innerHTML = qr.svg(joinUrl, 256);
+      }
+    } catch (e) {
+      console.error('[slide-remote] QR load failed:', e);
+      if (joinUrl === this.lastJoinUrl) {
+        this.qrHost.textContent = 'Could not load QR — open the link below.';
+      }
     }
   }
 
   close(): void {
     if (!this.root.isConnected) return;
-    document.removeEventListener('keydown', this.onKeydown);
+    document.removeEventListener('keydown', this.onKeydown, true);
     this.root.remove();
   }
 
   setStatus(text: string): void {
     this.statusEl.textContent = text;
   }
-
-  setPeerCount(n: number): void {
-    this.peerEl.textContent = String(n);
-  }
 }
 
 // Tiny non-blocking status badge in the corner once paired, so the presenter
 // always sees connection state without the full overlay.
+//
+// Flash choreography for the 'connected' state: the badge's steady-state is
+// invisible (the deck looks untouched). Every entry into 'connected' — first
+// pair *and* every reconnect — is celebrated by a green flash held for
+// PAIRED_HOLD_MS, then fading to invisible over PAIRED_FADE_MS. Disconnect /
+// reconnecting / failed states stay sticky-visible until they resolve.
+const PAIRED_HOLD_MS = 2500;
+const PAIRED_FADE_MS = 600;
+
 export class StatusBadge {
   private root: HTMLDivElement;
   private textEl: HTMLSpanElement;
+  // The choreography schedules at most one timer at a time: the hold timer
+  // arms the fade timer only after firing, so they never coexist.
+  private flashTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     const dot = el('span', 'sr-badge__dot');
@@ -127,5 +159,28 @@ export class StatusBadge {
   setState(state: 'connected' | 'reconnecting' | 'disconnected', text: string): void {
     this.root.dataset.state = state;
     this.textEl.textContent = text;
+    if (state === 'connected') {
+      this.flashPaired();
+    } else {
+      this.cancelFlash();
+    }
+  }
+
+  private cancelFlash(): void {
+    if (this.flashTimer) clearTimeout(this.flashTimer);
+    this.flashTimer = undefined;
+    delete this.root.dataset.flash;
+  }
+
+  private flashPaired(): void {
+    this.cancelFlash();
+    this.root.dataset.flash = 'visible';
+    this.flashTimer = setTimeout(() => {
+      this.root.dataset.flash = 'fading';
+      this.flashTimer = setTimeout(() => {
+        this.root.dataset.flash = 'hidden';
+        this.flashTimer = undefined;
+      }, PAIRED_FADE_MS);
+    }, PAIRED_HOLD_MS);
   }
 }

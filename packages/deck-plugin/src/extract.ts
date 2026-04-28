@@ -7,6 +7,14 @@ import type { RevealApi } from './types';
 
 const MAX_NOTES_BYTES = 64 * 1024;
 
+// Sanitization is the dominant cost in pumpStateNow on note-heavy decks,
+// and Reveal fires fragmentshown/fragmenthidden many times per slide while
+// the notes DOM doesn't change. Cache by aside element — WeakMap drops
+// detached nodes naturally on re-render. Assumes notes DOM is static
+// post-render (true for Quarto-rendered decks); in-place innerHTML
+// mutation will not invalidate the cache.
+const NOTES_CACHE = new WeakMap<Element, string>();
+
 function slideTitle(slide: HTMLElement | undefined): string | undefined {
   if (!slide) return undefined;
   // Prefer h1, then h2, then h3 — strict by level, not DOM order. A
@@ -23,11 +31,14 @@ function slideNotes(slide: HTMLElement | undefined): string | undefined {
   if (!slide) return undefined;
   const aside = slide.querySelector(':scope > aside.notes');
   if (!aside) return undefined;
+  const cached = NOTES_CACHE.get(aside);
+  if (cached !== undefined) return cached || undefined;
   let html = sanitizeNotesHtml(aside.innerHTML);
   if (html.length > MAX_NOTES_BYTES) {
     // Degrade to plain text if a knitr-rendered chunk blew past the cap.
     html = (aside.textContent ?? '').slice(0, MAX_NOTES_BYTES);
   }
+  NOTES_CACHE.set(aside, html);
   return html || undefined;
 }
 

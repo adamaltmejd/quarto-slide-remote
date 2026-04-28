@@ -6,11 +6,13 @@ import type {
   SlideState,
 } from '@slide-remote/protocol';
 
+const VALID_COMMANDS: ReadonlySet<Command> = new Set(['next', 'prev', 'black', 'resetTimer']);
+
 // Constant-time string comparison. The token check below is the single auth
 // gate for the WS API; a length-equal byte XOR avoids leaking match progress
-// through wall-clock timing. Theoretical hardening — tokens are 128-bit
-// random, so a timing oracle wouldn't be useful in practice — but it's three
-// lines and removes the discussion.
+// through wall-clock timing. With 4-char Crockford-32 tokens (~20 bits each)
+// the real defense is edge rate-limiting, not constant-time compare — but
+// it's three lines and removes the discussion.
 function tokensEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0;
@@ -20,12 +22,30 @@ function tokensEqual(a: string, b: string): boolean {
   return r === 0;
 }
 
+// Idle TTL: how long the DO can sit with no /init, no WS upgrade, and no
+// inbound message before its storage is wiped. Bounds room-keyspace
+// occupancy and DO storage cost without depending on user behavior. On
+// every event we push the alarm forward; when it fires, if connections
+// remain we bump again, otherwise we deleteAll().
+const IDLE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Coalesce alarm writes: a presenter pushes state on every fragment, so
+// `bumpIdleAlarm` is called at WS-message frequency. Writing the alarm
+// every time is a pointless DO storage write — the resolution we need is
+// "did we see traffic in the last day," not the last 30 ms. Skip the write
+// if we already pushed the alarm forward within this debounce window.
+const ALARM_DEBOUNCE_MS = 5 * 60 * 1000;
+
 // One Durable Object per room. Mediates messages between the presenter
 // (the deck) and viewers (phones). State held in DO storage so a hibernated
 // DO wakes up with the latest snapshot.
 export class RoomDO {
   private connections = new Map<WebSocket, Role>();
   private presenterToken?: string;
+  // Wall-clock ms of the most recent setAlarm; in-memory only — on DO
+  // hibernation it resets to 0, which costs us at most one extra setAlarm
+  // call per wake (acceptable).
+  private lastAlarmBumpAt = 0;
 
   constructor(
     private state: DurableObjectState,
@@ -48,8 +68,13 @@ export class RoomDO {
     if (url.pathname === '/init') {
       const token = url.searchParams.get('token');
       if (!token) return new Response('bad request', { status: 400 });
+      // Reject re-init: with short room IDs (4 chars Crockford-32, ~1M
+      // keyspace) the mint loop relies on this 409 to detect collisions
+      // and retry with a fresh ID.
+      if (this.presenterToken) return new Response('already initialized', { status: 409 });
       this.presenterToken = token;
       await this.state.storage.put('presenterToken', token);
+      await this.bumpIdleAlarm();
       return new Response('ok');
     }
 
@@ -83,6 +108,7 @@ export class RoomDO {
       }
     }
     this.broadcastPeer();
+    await this.bumpIdleAlarm();
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -109,7 +135,14 @@ export class RoomDO {
       };
       this.broadcast(out, 'viewer');
     } else if (msg.t === 'cmd' && role === 'viewer') {
-      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd as Command, args: msg.args };
+      // Reject unknown commands rather than forwarding arbitrary strings to
+      // the presenter — the wire schema is `Command`, but a malicious or
+      // out-of-date client can send anything.
+      if (!VALID_COMMANDS.has(msg.cmd)) {
+        this.send(ws, { t: 'error', code: 'bad_cmd', msg: `unknown cmd: ${msg.cmd}` });
+        return;
+      }
+      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd };
       this.broadcast(out, 'presenter');
     } else {
       this.send(ws, {
@@ -118,6 +151,31 @@ export class RoomDO {
         msg: `${msg.t} not allowed for role ${role}`,
       });
     }
+    await this.bumpIdleAlarm();
+  }
+
+  // Cloudflare DO alarm callback. Wakes the DO ~IDLE_TTL_MS after the most
+  // recent activity. If connections remain (long-running talk), we just
+  // bump the alarm again. If the room is fully idle, wipe storage and
+  // in-memory state so the room ID is freed for the mint loop to reuse.
+  async alarm(): Promise<void> {
+    if (this.state.getWebSockets().length > 0) {
+      await this.bumpIdleAlarm();
+      return;
+    }
+    await this.state.storage.deleteAll();
+    this.presenterToken = undefined;
+    this.connections.clear();
+    // Reset debounce too: otherwise a re-init's bumpIdleAlarm could be
+    // skipped, leaving the freshly-wiped DO without an alarm scheduled.
+    this.lastAlarmBumpAt = 0;
+  }
+
+  private async bumpIdleAlarm(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastAlarmBumpAt < ALARM_DEBOUNCE_MS) return;
+    this.lastAlarmBumpAt = now;
+    await this.state.storage.setAlarm(now + IDLE_TTL_MS);
   }
 
   webSocketClose(ws: WebSocket): void {

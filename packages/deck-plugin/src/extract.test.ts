@@ -23,7 +23,6 @@ function makeReveal(opts: {
     on: () => {},
     next: () => {},
     prev: () => {},
-    slide: () => {},
     togglePause: () => {},
     isPaused: () => opts.paused ?? false,
     getCurrentSlide: () => opts.current,
@@ -95,6 +94,19 @@ describe('extractState — notes', () => {
     const slide = makeSlide(`<section><h2>t</h2></section>`);
     const reveal = makeReveal({ current: slide });
     expect(extractState(reveal, 'r').notesHtml).toBeUndefined();
+  });
+
+  test('caches sanitized notes per aside element', () => {
+    const slide = makeSlide(`<section><h2>t</h2><aside class="notes"><p>v1</p></aside></section>`);
+    const reveal = makeReveal({ current: slide });
+    const first = extractState(reveal, 'r').notesHtml;
+    // Mutating innerHTML in place should NOT invalidate — proves the
+    // second call hit the cache instead of re-reading + re-sanitizing.
+    const aside = slide.querySelector(':scope > aside.notes');
+    if (!aside) throw new Error('aside missing');
+    aside.innerHTML = '<p>v2-should-be-ignored</p>';
+    const second = extractState(reveal, 'r').notesHtml;
+    expect(second).toBe(first);
   });
 
   test('caps notes at 64 KB and degrades to plain text', () => {

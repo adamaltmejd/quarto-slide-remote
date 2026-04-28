@@ -362,3 +362,58 @@ body {
 .sr-fatal p {
   color: #d4d4d4;
 }
+
+/* ─── landing screen ───────────────────────────────────────────────────── */
+
+.sr-landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 24px;
+  gap: 14px;
+  text-align: center;
+}
+.sr-landing__form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 26em;
+}
+.sr-landing__input {
+  flex: 1;
+  font-family: var(--sr-mono);
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  background: #111;
+  color: #f0f0f0;
+  min-width: 0;
+}
+.sr-landing__input:focus {
+  outline: none;
+  border-color: #444;
+}
+.sr-landing__submit {
+  padding: 12px 20px;
+  font-size: 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: #e6e6e6;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sr-landing__submit:active {
+  background: #1f1f1f;
+}
+.sr-landing__error {
+  margin: 0;
+  color: #f87171;
+  font-size: 14px;
+  min-height: 1.2em;
+}

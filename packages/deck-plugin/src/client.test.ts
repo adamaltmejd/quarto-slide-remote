@@ -6,11 +6,10 @@ interface Calls {
   next: number;
   prev: number;
   togglePause: number;
-  slide: Array<{ h: number; v: number; f: number | undefined }>;
 }
 
 function spy(): { reveal: RevealApi; calls: Calls } {
-  const calls: Calls = { next: 0, prev: 0, togglePause: 0, slide: [] };
+  const calls: Calls = { next: 0, prev: 0, togglePause: 0 };
   const reveal: RevealApi = {
     on: () => {},
     next: () => {
@@ -18,9 +17,6 @@ function spy(): { reveal: RevealApi; calls: Calls } {
     },
     prev: () => {
       calls.prev++;
-    },
-    slide: (h, v, f) => {
-      calls.slide.push({ h, v: v ?? 0, f });
     },
     togglePause: () => {
       calls.togglePause++;
@@ -37,49 +33,19 @@ function spy(): { reveal: RevealApi; calls: Calls } {
 describe('applyRemoteCommand', () => {
   test('next → reveal.next()', () => {
     const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'next', undefined);
+    applyRemoteCommand(reveal, 'next');
     expect(calls.next).toBe(1);
   });
 
   test('prev → reveal.prev()', () => {
     const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'prev', undefined);
+    applyRemoteCommand(reveal, 'prev');
     expect(calls.prev).toBe(1);
   });
 
   test('black → reveal.togglePause()', () => {
     const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'black', undefined);
+    applyRemoteCommand(reveal, 'black');
     expect(calls.togglePause).toBe(1);
-  });
-
-  test('goto with full args dispatches all three indices', () => {
-    const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'goto', { h: 3, v: 1, f: 2 });
-    expect(calls.slide).toEqual([{ h: 3, v: 1, f: 2 }]);
-  });
-
-  test('goto with only h defaults v to 0 and leaves f undefined', () => {
-    const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'goto', { h: 5 });
-    expect(calls.slide).toEqual([{ h: 5, v: 0, f: undefined }]);
-  });
-
-  test('goto without h is a no-op', () => {
-    const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'goto', {});
-    expect(calls.slide).toEqual([]);
-  });
-
-  test('goto with no args object is a no-op', () => {
-    const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'goto', undefined);
-    expect(calls.slide).toEqual([]);
-  });
-
-  test('goto with non-numeric h is rejected', () => {
-    const { reveal, calls } = spy();
-    applyRemoteCommand(reveal, 'goto', { h: '3' });
-    expect(calls.slide).toEqual([]);
   });
 });

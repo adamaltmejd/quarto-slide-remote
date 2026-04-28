@@ -8,6 +8,7 @@
       "!**/.wrangler",
       "!dist",
       "!_extensions/slide-remote/slide-remote.js",
+      "!_extensions/slide-remote/slide-remote-qr.js",
       "!packages/worker/assets",
       "!demo/.cache"
     ]

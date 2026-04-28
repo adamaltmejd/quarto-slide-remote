@@ -29,7 +29,7 @@ type RevealCommand = Exclude<Command, 'resetTimer'>;
 
 // Pure command dispatch. Exported so tests can exercise it without standing
 // up a WebSocket / fetch / mint flow.
-export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: unknown): void {
+export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand): void {
   switch (cmd) {
     case 'next':
       reveal.next();
@@ -37,11 +37,6 @@ export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: 
     case 'prev':
       reveal.prev();
       break;
-    case 'goto': {
-      const a = (args ?? {}) as { h?: number; v?: number; f?: number };
-      if (typeof a.h === 'number') reveal.slide(a.h, a.v ?? 0, a.f);
-      break;
-    }
     case 'black':
       reveal.togglePause();
       break;
@@ -49,7 +44,7 @@ export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand, args: 
 }
 
 export interface ClientHandlers {
-  onConnected(joinUrl: string, roomId: string): void;
+  onConnected(joinUrl: string, roomId: string, pairCode: string): void;
   onStatus(status: ClientStatus): void;
   onPeerCount(presenter: number, viewer: number): void;
   onError(msg: string): void;
@@ -87,7 +82,7 @@ export class Client {
       this.handlers.onStatus('failed');
       return;
     }
-    this.handlers.onConnected(this.room.joinUrl, this.room.roomId);
+    this.handlers.onConnected(this.room.joinUrl, this.room.roomId, this.room.pairCode);
     this.openSocket();
     this.attachRevealHooks();
   }
@@ -149,7 +144,7 @@ export class Client {
           this.startedAt = Date.now();
           this.pumpStateSoon();
         } else {
-          applyRemoteCommand(this.reveal, msg.cmd, msg.args);
+          applyRemoteCommand(this.reveal, msg.cmd);
         }
         break;
       case 'peer':

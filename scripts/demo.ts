@@ -22,6 +22,9 @@ const repoRoot = resolve(here, '..');
 const demoDir = resolve(repoRoot, 'demo');
 const cacheDir = resolve(demoDir, '.cache');
 const pluginBundle = resolve(cacheDir, 'slide-remote.js');
+// Lazy QR chunk fetched at overlay-open time. build.ts emits it next to
+// the main bundle, so it lives alongside slide-remote.js in cacheDir.
+const pluginQrBundle = resolve(cacheDir, 'slide-remote-qr.js');
 const phoneUiAsset = resolve(repoRoot, 'packages', 'worker', 'assets', 'main.js');
 // CSS is checked in (no build step), so we serve it directly.
 const pluginCss = resolve(repoRoot, '_extensions', 'slide-remote', 'slide-remote.css');
@@ -190,6 +193,11 @@ const server = Bun.serve({
     }
     if (path === '/slide-remote.js') {
       return new Response(Bun.file(pluginBundle), {
+        headers: { 'content-type': 'application/javascript; charset=utf-8' },
+      });
+    }
+    if (path === '/slide-remote-qr.js') {
+      return new Response(Bun.file(pluginQrBundle), {
         headers: { 'content-type': 'application/javascript; charset=utf-8' },
       });
     }
