@@ -6,6 +6,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — phone UI
+
+- **Edge-swipe gesture for next/prev.** Photo-app-style: a touch swipe
+  inward from the right edge advances the slide, from the left edge
+  goes back. Pure pointer events, no library. The recognized region
+  starts 8 px inboard from each edge so iOS Safari's bezel-anchored
+  back-swipe still wins at x≈0; the inboard zone extends to 32 px.
+  A 50 px horizontal travel commits the gesture; any vertical-dominant
+  movement (`|dy| > |dx|`) abandons it, so a touch that starts in the
+  edge zone but turns into a notes-pane scroll never fires next/prev.
+  Mouse pointers are ignored — desktop drags would hijack text
+  selection. NEXT/PREV/PAUSE buttons are unchanged; the gesture
+  supplements them.
+
+### Changed — pairing overlay
+
+- **Modal keyboard trap.** While the overlay is mounted, every
+  document-level keydown is swallowed in the capture phase so Reveal's
+  arrow / `N` / `P` / `B` / `O` / space shortcuts can no longer
+  navigate the deck under the open QR. Esc still closes (the v0.4
+  capture-phase fix is preserved); browser-level shortcuts (Cmd+R,
+  Cmd+W, Tab focus) are unaffected because they don't ride DOM
+  propagation. Matches the panel's existing `aria-modal="true"`
+  intent — the runtime now agrees with the ARIA promise.
+
 ## [0.4.0] - 2026-04-28
 
 ### Added — worker
