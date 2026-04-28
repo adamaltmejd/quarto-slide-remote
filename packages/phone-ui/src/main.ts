@@ -2,6 +2,7 @@ import type { Command } from '@slide-remote/protocol';
 import { buildLanding } from './landing';
 import { buildFatal, buildUi } from './render';
 import { clearSession, loadSession, saveSession } from './session';
+import { attachEdgeSwipe } from './swipe';
 import { WakeLockManager } from './wake-lock';
 import { ViewerClient, type ViewerStatus } from './ws';
 
@@ -75,6 +76,15 @@ const ui = buildUi({
   },
 });
 document.body.replaceChildren(ui.root);
+
+// Photo-app-style edge swipes: right edge inward → next, left edge inward → prev.
+// Attached to body so the recognizer sees pointerdowns even when they land on
+// the notes pane (which scrolls vertically — the gesture self-disqualifies on
+// vertical movement, so scrolling still works).
+attachEdgeSwipe(document.body, {
+  onPrev: () => send('prev'),
+  onNext: () => send('next'),
+});
 
 // Track previous status so we can surface transitions (rather than absolute
 // state) via the toast — the persistent dot already covers absolute state.
