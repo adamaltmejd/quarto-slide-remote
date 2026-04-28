@@ -1,15 +1,15 @@
 # Roadmap
 
-**Status:** v0.3.1 shipped 2026-04-28 at
+**Status:** v0.4.0 shipped 2026-04-28 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
-v0.4 work starts here.
+v0.5 work starts here.
 
 The MVP is functional end-to-end: deck → QR → phone → WS → Worker →
-Durable Object. Quality gates (biome lint, tsc typecheck, 84 unit tests,
+Durable Object. Quality gates (biome lint, tsc typecheck, unit tests,
 integration smoke test, 3-scenario decktape-silent invariant, 30 KB gzip
-bundle budget) run in CI on every push. The full v0.1 / v0.2 / v0.3
-ledger — what's implemented, hardened, and tested — lives in
+bundle budget) run in CI on every push. The full v0.1 / v0.2 / v0.3 /
+v0.4 ledger — what's implemented, hardened, and tested — lives in
 [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -126,11 +126,12 @@ about the Worker dependency.
 
 ---
 
-## v0.4 — Cleanup, polish, perf
+## v0.4 — Cleanup, polish, perf, codes
 
-Six low-risk items shippable as one release. Edge-swipe is split out
-into v0.5 because it carries real device-testing risk and shouldn't
-block these wins.
+**Status:** shipped 2026-04-28. Edge-swipe was split out into v0.5
+because it carries real device-testing risk; this release captured
+the low-risk wins plus the short-pairing-codes refactor that landed
+mid-cycle.
 
 - [x] **Rip out `cmd: 'goto'`.** Done. Also removed the unused `args`
       field on cmd messages and `RevealApi.slide()` (only caller was
