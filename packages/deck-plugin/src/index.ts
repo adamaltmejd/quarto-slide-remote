@@ -18,13 +18,15 @@ const PLUGIN_BASE = ((): string => {
 })();
 
 // Overlay status surfaces the *pairing* lifecycle, not the deck-side WS
-// health: "connected" would otherwise show as soon as the deck's own WS
-// upgrade succeeds, before any phone has scanned the QR. Once a phone
-// pairs, the overlay auto-dismisses anyway.
+// health: a deck WS in 'connected' state has only reached the worker,
+// not been paired with a remote. The controller upgrades this to 'paired'
+// once peer count reports a remote attached. "Remote" rather than "phone"
+// because the laptop-as-remote landing form makes a non-phone pairing a
+// supported path.
 const OVERLAY_STATUS_TEXT: Record<ClientStatus, string> = {
   minting: 'minting room…',
   connecting: 'connecting…',
-  connected: 'waiting for phone…',
+  connected: 'waiting for remote…',
   reconnecting: 'reconnecting…',
   disconnected: 'disconnected',
   failed: 'failed',
@@ -55,6 +57,11 @@ class SlideRemoteController {
   private overlay?: Overlay;
   private badge?: StatusBadge;
   private client?: Client;
+  // Track WS status and remote-attached count so we can compute the overlay
+  // status from both signals (vs. the older code which only reflected WS
+  // status — leaving "waiting for remote…" stale after a remote paired).
+  private status: ClientStatus = 'minting';
+  private remotes = 0;
 
   constructor(
     private cfg: PluginConfig,
@@ -63,12 +70,17 @@ class SlideRemoteController {
 
   // Called by every activation trigger (?remote=1, Shift+R, button click).
   // First call mints a room and connects; later calls just re-open the overlay
-  // so the presenter can rescan with another phone or recover after dismissing.
+  // so the presenter can rescan with another remote or recover after dismissing.
   // shouldDisable() already guarantees a non-empty workerUrl.
   activate(): void {
     if (this.client) {
       const room = this.client.getRoom();
-      if (room) this.overlay?.open(room.joinUrl, room.pairCode);
+      if (room) {
+        this.overlay?.open(room.joinUrl, room.pairCode);
+        // Re-open after a previous pair: surface the current state rather
+        // than whatever text was set before close().
+        this.overlay?.setStatus(this.overlayStatus());
+      }
       return;
     }
     this.overlay = new Overlay(PLUGIN_BASE, { onClose: () => this.overlay?.close() });
@@ -80,16 +92,24 @@ class SlideRemoteController {
         this.badge?.setState('connected', `room ${roomId}`);
       },
       onStatus: (status) => {
-        this.overlay?.setStatus(OVERLAY_STATUS_TEXT[status]);
+        this.status = status;
+        this.overlay?.setStatus(this.overlayStatus());
         this.badge?.setState(BADGE_STATE[status], BADGE_STATUS_TEXT[status]);
       },
       onPeerCount: (_presenter, viewer) => {
-        // Auto-dismiss the pairing overlay once a phone connects.
+        this.remotes = viewer;
+        this.overlay?.setStatus(this.overlayStatus());
+        // Auto-dismiss the pairing overlay once a remote attaches.
         if (viewer > 0) this.overlay?.close();
       },
       onError: (msg) => console.error('[slide-remote]', msg),
     });
     void this.client.start();
+  }
+
+  private overlayStatus(): string {
+    if (this.remotes > 0 && this.status === 'connected') return 'paired';
+    return OVERLAY_STATUS_TEXT[this.status];
   }
 }
 
