@@ -6,6 +6,8 @@ import type {
   SlideState,
 } from '@slide-remote/protocol';
 
+const VALID_COMMANDS: ReadonlySet<Command> = new Set(['next', 'prev', 'black', 'resetTimer']);
+
 // Constant-time string comparison. The token check below is the single auth
 // gate for the WS API; a length-equal byte XOR avoids leaking match progress
 // through wall-clock timing. With 4-char Crockford-32 tokens (~20 bits each)
@@ -27,12 +29,23 @@ function tokensEqual(a: string, b: string): boolean {
 // remain we bump again, otherwise we deleteAll().
 const IDLE_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Coalesce alarm writes: a presenter pushes state on every fragment, so
+// `bumpIdleAlarm` is called at WS-message frequency. Writing the alarm
+// every time is a pointless DO storage write — the resolution we need is
+// "did we see traffic in the last day," not the last 30 ms. Skip the write
+// if we already pushed the alarm forward within this debounce window.
+const ALARM_DEBOUNCE_MS = 5 * 60 * 1000;
+
 // One Durable Object per room. Mediates messages between the presenter
 // (the deck) and viewers (phones). State held in DO storage so a hibernated
 // DO wakes up with the latest snapshot.
 export class RoomDO {
   private connections = new Map<WebSocket, Role>();
   private presenterToken?: string;
+  // Wall-clock ms of the most recent setAlarm; in-memory only — on DO
+  // hibernation it resets to 0, which costs us at most one extra setAlarm
+  // call per wake (acceptable).
+  private lastAlarmBumpAt = 0;
 
   constructor(
     private state: DurableObjectState,
@@ -122,7 +135,14 @@ export class RoomDO {
       };
       this.broadcast(out, 'viewer');
     } else if (msg.t === 'cmd' && role === 'viewer') {
-      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd as Command };
+      // Reject unknown commands rather than forwarding arbitrary strings to
+      // the presenter — the wire schema is `Command`, but a malicious or
+      // out-of-date client can send anything.
+      if (!VALID_COMMANDS.has(msg.cmd)) {
+        this.send(ws, { t: 'error', code: 'bad_cmd', msg: `unknown cmd: ${msg.cmd}` });
+        return;
+      }
+      const out: ServerMessage = { t: 'cmd', cmd: msg.cmd };
       this.broadcast(out, 'presenter');
     } else {
       this.send(ws, {
@@ -149,7 +169,10 @@ export class RoomDO {
   }
 
   private async bumpIdleAlarm(): Promise<void> {
-    await this.state.storage.setAlarm(Date.now() + IDLE_TTL_MS);
+    const now = Date.now();
+    if (now - this.lastAlarmBumpAt < ALARM_DEBOUNCE_MS) return;
+    this.lastAlarmBumpAt = now;
+    await this.state.storage.setAlarm(now + IDLE_TTL_MS);
   }
 
   webSocketClose(ws: WebSocket): void {
