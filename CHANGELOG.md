@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed — pairing overlay
+
+- **"Phones" peer-count row.** The overlay's "Phones: N" line was
+  noise: the overlay auto-dismisses the moment a phone connects, so
+  the count was almost always 0 right before close. Internal
+  auto-dismiss-on-pair logic is unchanged; only the visible row and
+  the now-unused `setPeerCount` API are gone.
+- **"Scan with your iPhone camera" hint copy.** The QR icon already
+  says what to do; iOS camera-scan is the only working path on most
+  current phones, so the hint was both obvious and slightly wrong on
+  Android (Lens / built-in scanner does it). Hint now reads "Press
+  Esc to dismiss."
+
 ### Changed — deck plugin bundle
 
 - **QR library lazy-loaded as a separate chunk.** `qrcode-generator`

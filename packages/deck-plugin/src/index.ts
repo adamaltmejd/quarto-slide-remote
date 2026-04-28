@@ -69,7 +69,7 @@ class SlideRemoteController {
         this.badge?.setState(BADGE_STATE[status], badgeText);
       },
       onPeerCount: (_presenter, viewer) => {
-        this.overlay?.setPeerCount(viewer);
+        // Auto-dismiss the pairing overlay once a phone connects.
         if (viewer > 0) this.overlay?.close();
       },
       onError: (msg) => console.error('[slide-remote]', msg),

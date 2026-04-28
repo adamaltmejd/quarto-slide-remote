@@ -28,7 +28,6 @@ export class Overlay {
   private root: HTMLDivElement;
   private qrHost: HTMLDivElement;
   private statusEl: HTMLSpanElement;
-  private peerEl: HTMLSpanElement;
   private codeEl: HTMLSpanElement;
   private linkEl: HTMLAnchorElement;
   private lastJoinUrl?: string;
@@ -41,7 +40,6 @@ export class Overlay {
     this.qrHost = el('div', 'sr-overlay__qr');
     this.codeEl = el('span', 'sr-overlay__code');
     this.statusEl = el('span', 'sr-overlay__status', 'connecting…');
-    this.peerEl = el('span', 'sr-overlay__peer', '0');
 
     const closeBtn = el('button', 'sr-overlay__close', '×');
     closeBtn.type = 'button';
@@ -49,7 +47,7 @@ export class Overlay {
     closeBtn.addEventListener('click', handlers.onClose);
 
     const meta = el('div', 'sr-overlay__meta');
-    meta.append(row('Room', this.codeEl), row('Status', this.statusEl), row('Phones', this.peerEl));
+    meta.append(row('Room', this.codeEl), row('Status', this.statusEl));
 
     // Plain-text fallback for users without a phone camera, and a quick way
     // to open the phone UI in a second browser window for a laptop-only test.
@@ -67,7 +65,7 @@ export class Overlay {
       this.qrHost,
       meta,
       this.linkEl,
-      el('p', 'sr-overlay__hint', 'Scan with your iPhone camera. Press Esc to dismiss.'),
+      el('p', 'sr-overlay__hint', 'Press Esc to dismiss.'),
     );
 
     this.root = el('div', 'sr-overlay');
@@ -120,10 +118,6 @@ export class Overlay {
 
   setStatus(text: string): void {
     this.statusEl.textContent = text;
-  }
-
-  setPeerCount(n: number): void {
-    this.peerEl.textContent = String(n);
   }
 }
 
