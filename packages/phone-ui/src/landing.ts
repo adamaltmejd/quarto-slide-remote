@@ -49,14 +49,6 @@ export function buildLanding(): HTMLElement {
   const root = document.createElement('main');
   root.className = 'sr-landing';
 
-  const title = document.createElement('h1');
-  title.className = 'sr-landing__title';
-  title.textContent = 'slide-remote';
-
-  const hint = document.createElement('p');
-  hint.className = 'sr-landing__hint';
-  hint.textContent = 'Enter the code shown on the deck (e.g. R12V-P138) or paste the join link.';
-
   const form = document.createElement('form');
   form.className = 'sr-landing__form';
 
@@ -79,7 +71,7 @@ export function buildLanding(): HTMLElement {
   error.hidden = true;
 
   form.append(input, submit);
-  root.append(title, hint, form, error);
+  root.append(form, error);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();

@@ -375,24 +375,11 @@ body {
   gap: 14px;
   text-align: center;
 }
-.sr-landing__title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 500;
-  color: #d4d4d4;
-}
-.sr-landing__hint {
-  margin: 0;
-  max-width: 30em;
-  color: #888;
-  font-size: 14px;
-}
 .sr-landing__form {
   display: flex;
   gap: 8px;
   width: 100%;
   max-width: 26em;
-  margin-top: 8px;
 }
 .sr-landing__input {
   flex: 1;
@@ -409,20 +396,20 @@ body {
 }
 .sr-landing__input:focus {
   outline: none;
-  border-color: #1d4ed8;
+  border-color: #444;
 }
 .sr-landing__submit {
   padding: 12px 20px;
   font-size: 16px;
   border: 0;
   border-radius: 8px;
-  background: #1d4ed8;
-  color: #f8fafc;
+  background: #2a2a2a;
+  color: #e6e6e6;
   cursor: pointer;
   touch-action: manipulation;
 }
 .sr-landing__submit:active {
-  background: #1e40af;
+  background: #1f1f1f;
 }
 .sr-landing__error {
   margin: 0;
