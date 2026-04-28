@@ -148,14 +148,9 @@ block these wins.
 - [x] **Haptic feedback** on `cmd` ack via `navigator.vibrate(10)`.
       Done. Buzzes only when the WS actually accepted the message;
       iOS Safari no-ops silently via optional chaining.
-- [ ] **Cache sanitized notes per slide.** `sanitizeNotesHtml` runs
-      on every `pumpStateNow`, including `fragmentshown`/`fragmenthidden`
-      events on a slide whose notes haven't changed. Add a
-      `WeakMap<Element, string>` keyed by the slide element so notes
-      are sanitized once per slide. Invalidate naturally when the deck
-      re-renders (WeakMap drops detached nodes). Worth the change for
-      note-heavy decks where sanitization shows up in the flush-state
-      hot path.
+- [x] **Cache sanitized notes per slide.** Done. Keyed by the `<aside
+      class="notes">` element rather than the slide itself — same
+      WeakMap-drops-on-detach behavior, slightly tighter cache surface.
 - [ ] **Lazy-load the QR library** in `packages/deck-plugin`.
       `qrcode-generator` (~50 KB raw, the bulk of the bundle) only runs
       when a presenter opens the pairing overlay, but it currently parses

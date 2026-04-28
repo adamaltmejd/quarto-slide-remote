@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — deck plugin
+
+- **Notes sanitization is cached per aside element.** `sanitizeNotesHtml`
+  used to run on every `pumpStateNow` — including the many
+  `fragmentshown`/`fragmenthidden` events fired while a slide's notes
+  DOM is unchanged. Notes are now cached in a module-level
+  `WeakMap<Element, string>` keyed by the `<aside class="notes">`
+  element, so each aside is sanitized at most once. The WeakMap drops
+  detached nodes naturally when the deck re-renders. Assumes notes DOM
+  is static post-render (true for Quarto-rendered decks).
+
 ### Added — phone UI
 
 - **Haptic feedback on cmd send.** Tapping NEXT / PREV / PAUSE / timer-reset
