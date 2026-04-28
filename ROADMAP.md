@@ -145,10 +145,9 @@ block these wins.
       `setTimeout`; no protocol change. Position is already top-right
       (collides with neither reveal.js's bottom-right `slideNumber`
       nor a consumer's bottom-left status widgets).
-- [ ] **Haptic feedback** on `cmd` ack via `navigator.vibrate(10)`.
-      Android-only in practice — iOS Safari doesn't expose the API,
-      so the call no-ops there. Ship anyway: one line, real win on
-      Android, silent on iOS.
+- [x] **Haptic feedback** on `cmd` ack via `navigator.vibrate(10)`.
+      Done. Buzzes only when the WS actually accepted the message;
+      iOS Safari no-ops silently via optional chaining.
 - [ ] **Cache sanitized notes per slide.** `sanitizeNotesHtml` runs
       on every `pumpStateNow`, including `fragmentshown`/`fragmenthidden`
       events on a slide whose notes haven't changed. Add a

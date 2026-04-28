@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — phone UI
+
+- **Haptic feedback on cmd send.** Tapping NEXT / PREV / PAUSE / timer-reset
+  now triggers `navigator.vibrate(10)` if and only if the WebSocket
+  actually accepted the message — an offline tap doesn't fake-confirm.
+  Android-only in practice; iOS Safari leaves `navigator.vibrate`
+  undefined and the optional call no-ops silently.
+
 ### Removed — protocol
 
 - **`cmd: 'goto'` and the `args` field on cmd messages.** The

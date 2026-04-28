@@ -1,3 +1,4 @@
+import type { Command } from '@slide-remote/protocol';
 import { buildFatal, buildUi } from './render';
 import { clearSession, loadSession, saveSession } from './session';
 import { WakeLockManager } from './wake-lock';
@@ -49,11 +50,18 @@ if (tokenFromUrl) {
 
 const wakeLock = new WakeLockManager();
 
+// Buzz only when the WS actually accepted the message — an offline tap
+// shouldn't fake-confirm. Android-only in practice; iOS Safari leaves
+// navigator.vibrate undefined and the optional call no-ops.
+function send(cmd: Command): void {
+  if (client.send(cmd)) navigator.vibrate?.(10);
+}
+
 const ui = buildUi({
-  onPrev: () => client.send('prev'),
-  onNext: () => client.send('next'),
-  onPause: () => client.send('black'),
-  onResetTimer: () => client.send('resetTimer'),
+  onPrev: () => send('prev'),
+  onNext: () => send('next'),
+  onPause: () => send('black'),
+  onResetTimer: () => send('resetTimer'),
   onRepair: () => {
     client.stop();
     void wakeLock.release();
