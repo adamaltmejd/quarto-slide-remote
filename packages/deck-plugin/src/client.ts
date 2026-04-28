@@ -44,7 +44,7 @@ export function applyRemoteCommand(reveal: RevealApi, cmd: RevealCommand): void 
 }
 
 export interface ClientHandlers {
-  onConnected(joinUrl: string, roomId: string): void;
+  onConnected(joinUrl: string, roomId: string, pairCode: string): void;
   onStatus(status: ClientStatus): void;
   onPeerCount(presenter: number, viewer: number): void;
   onError(msg: string): void;
@@ -82,7 +82,7 @@ export class Client {
       this.handlers.onStatus('failed');
       return;
     }
-    this.handlers.onConnected(this.room.joinUrl, this.room.roomId);
+    this.handlers.onConnected(this.room.joinUrl, this.room.roomId, this.room.pairCode);
     this.openSocket();
     this.attachRevealHooks();
   }

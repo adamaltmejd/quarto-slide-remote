@@ -52,16 +52,16 @@ class SlideRemoteController {
   activate(): void {
     if (this.client) {
       const room = this.client.getRoom();
-      if (room) this.overlay?.open(room.joinUrl, room.roomId);
+      if (room) this.overlay?.open(room.joinUrl, room.pairCode);
       return;
     }
     this.overlay = new Overlay(PLUGIN_BASE, { onClose: () => this.overlay?.close() });
     this.badge = new StatusBadge();
     this.client = new Client(this.cfg.workerUrl, this.reveal, {
-      onConnected: (joinUrl, roomId) => {
-        this.overlay?.open(joinUrl, roomId);
+      onConnected: (joinUrl, roomId, pairCode) => {
+        this.overlay?.open(joinUrl, pairCode);
         this.badge?.attach();
-        this.badge?.setState('connected', `room ${roomId.slice(0, 6)}`);
+        this.badge?.setState('connected', `room ${roomId}`);
       },
       onStatus: (status) => {
         this.overlay?.setStatus(STATUS_TEXT[status]);

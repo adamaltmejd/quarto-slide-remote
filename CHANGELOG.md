@@ -6,6 +6,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — pairing codes
+
+- **Short, typeable pairing codes.** Room IDs and tokens are now 4
+  Crockford-32 characters each (alphabet `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`,
+  no `0/O/I/L/1`), joined with a dash for display: e.g. `R12V-P138`.
+  Previous shape was 10-hex room + 32-hex token. The deck overlay now
+  surfaces the combined `pairCode` under `Code:` so a presenter can
+  read it off the screen for someone using a separate computer as the
+  remote. Entropy drops from 168 bits to 40 bits combined; the practical
+  defense moves to edge rate-limits on `/api/ws` (a v0.4 Beyond item if
+  real-world abuse appears).
+
+  Mint endpoint now retries up to 10 times against the new 1M-code
+  keyspace if the chosen room ID collides with an active DO; the
+  `RoomDO` `/init` route returns 409 on re-init to drive the loop.
+  `RoomCreateResponse` gains a `pairCode` field — `${roomId}-${presenterToken}`
+  — so clients don't have to reconstruct it.
+
+  Roles renamed for clarity in the conversation around manual entry
+  (no protocol change yet): the slide window is the *presenter*, the
+  phone or laptop driving it is the *remote*, and a future read-only
+  audience role would be the *viewer*. The `Role` union still uses
+  `viewer` for what is now called *remote*; rename deferred until the
+  audience role lands.
+
 ### Removed — pairing overlay
 
 - **"Phones" peer-count row.** The overlay's "Phones: N" line was

@@ -8,9 +8,9 @@ import type {
 
 // Constant-time string comparison. The token check below is the single auth
 // gate for the WS API; a length-equal byte XOR avoids leaking match progress
-// through wall-clock timing. Theoretical hardening — tokens are 128-bit
-// random, so a timing oracle wouldn't be useful in practice — but it's three
-// lines and removes the discussion.
+// through wall-clock timing. With 4-char Crockford-32 tokens (~20 bits) the
+// real defense is edge rate-limiting, not constant-time compare — but it's
+// three lines and removes the discussion.
 function tokensEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0;
@@ -48,6 +48,10 @@ export class RoomDO {
     if (url.pathname === '/init') {
       const token = url.searchParams.get('token');
       if (!token) return new Response('bad request', { status: 400 });
+      // Reject re-init: with short room IDs (4 chars Crockford-32, ~1M
+      // keyspace) the mint loop relies on this 409 to detect collisions
+      // and retry with a fresh ID.
+      if (this.presenterToken) return new Response('already initialized', { status: 409 });
       this.presenterToken = token;
       await this.state.storage.put('presenterToken', token);
       return new Response('ok');

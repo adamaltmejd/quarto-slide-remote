@@ -48,5 +48,8 @@ export type ServerMessage =
 export interface RoomCreateResponse {
   roomId: string;
   presenterToken: string;
+  // Display-friendly combined code, e.g. "R12V-P138". roomId-presenterToken
+  // joined with a dash. Computed server-side so clients don't have to.
+  pairCode: string;
   joinUrl: string;
 }

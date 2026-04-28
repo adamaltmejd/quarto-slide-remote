@@ -55,9 +55,10 @@ describe('protocol round-trip', () => {
 
   test('RoomCreateResponse round-trip', () => {
     const room: RoomCreateResponse = {
-      roomId: 'ABCD1234',
-      presenterToken: 'deadbeef',
-      joinUrl: 'https://example/r/ABCD1234#t=deadbeef',
+      roomId: 'R12V',
+      presenterToken: 'P138',
+      pairCode: 'R12V-P138',
+      joinUrl: 'https://example/r/R12V#t=P138',
     };
     expect(roundtrip(room)).toEqual(room);
   });

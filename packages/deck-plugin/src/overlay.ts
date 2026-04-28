@@ -47,7 +47,7 @@ export class Overlay {
     closeBtn.addEventListener('click', handlers.onClose);
 
     const meta = el('div', 'sr-overlay__meta');
-    meta.append(row('Room', this.codeEl), row('Status', this.statusEl));
+    meta.append(row('Code', this.codeEl), row('Status', this.statusEl));
 
     // Plain-text fallback for users without a phone camera, and a quick way
     // to open the phone UI in a second browser window for a laptop-only test.
@@ -79,14 +79,14 @@ export class Overlay {
     };
   }
 
-  open(joinUrl: string, roomId: string): void {
+  open(joinUrl: string, pairCode: string): void {
     if (joinUrl !== this.lastJoinUrl) {
       this.qrHost.dataset.joinUrl = joinUrl;
       this.linkEl.href = joinUrl;
       this.lastJoinUrl = joinUrl;
       void this.fillQr(joinUrl);
     }
-    this.codeEl.textContent = roomId;
+    this.codeEl.textContent = pairCode;
     if (!this.root.isConnected) {
       document.body.appendChild(this.root);
       document.addEventListener('keydown', this.onKeydown);

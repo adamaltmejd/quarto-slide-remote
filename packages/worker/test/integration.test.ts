@@ -12,6 +12,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 interface RoomBody {
   roomId: string;
   presenterToken: string;
+  pairCode: string;
   joinUrl: string;
 }
 
@@ -179,8 +180,9 @@ describe.skipIf(!enabled)('worker integration', () => {
 
   test('mints a room and connects presenter+viewer', async () => {
     const room = await mintRoom();
-    expect(room.roomId).toMatch(/^[a-f0-9]{10}$/);
-    expect(room.presenterToken).toMatch(/^[a-f0-9]{32}$/);
+    expect(room.roomId).toMatch(/^[A-HJKMNP-Z2-9]{4}$/);
+    expect(room.presenterToken).toMatch(/^[A-HJKMNP-Z2-9]{4}$/);
+    expect(room.pairCode).toBe(`${room.roomId}-${room.presenterToken}`);
 
     const presenter = open('presenter', room);
     const viewer = open('viewer', room);
