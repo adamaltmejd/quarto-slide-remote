@@ -192,6 +192,26 @@ regenerate, and a sanitizer pass for tables and external links.
 
 ---
 
+## v0.6 — small followups
+
+**Status:** unreleased. Catch-all for the next round of small UX
+nudges. Pick items off as they earn their slot.
+
+- [ ] **Version + GitHub link footer on the phone UI.** A tiny,
+      muted `slide-remote vX.Y.Z` in the bottom-right of the page,
+      linking to
+      [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote).
+      Most visible on the landing screen (someone navigating to the
+      bare Worker origin); also fine as a corner footer on `/r/{room}`
+      since the layout already locks the body to `100dvh` and the notes
+      pane is the only scrollable region — a `position: fixed` corner
+      element won't fight content. Inject the version from the root
+      `package.json` at phone-ui build time (e.g. via a Bun build
+      `define` for `__SR_VERSION__`) so it stays in sync with releases
+      automatically; no runtime fetch.
+
+---
+
 ## Risks and known issues
 
 Tracked here so we don't forget; not in any priority order. Items
