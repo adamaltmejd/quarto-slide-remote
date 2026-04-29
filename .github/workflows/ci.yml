@@ -73,3 +73,18 @@ jobs:
 
       - name: Decktape-silent assertion
         run: bun scripts/check-decktape-silent.ts
+
+  bundle-fresh:
+    name: committed bundle matches a fresh build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Bundle-freshness assertion
+        run: bun run check:bundle

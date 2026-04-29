@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — CI
+
+- **Bundle-freshness check** (`scripts/check-bundle-fresh.ts`, new
+  `bundle-fresh` CI job). Builds the deck plugin minified into a temp
+  dir and asserts the committed
+  `_extensions/slide-remote/{slide-remote,slide-remote-qr}.js` match
+  byte-for-byte. Catches the previously convention-only invariant where
+  a contributor edits `packages/deck-plugin/src/` and forgets to rebuild
+  before committing — which would silently ship a stale bundle to
+  `quarto add` consumers (the extension pulls from a git tag, not main).
+  Bun's minifier is deterministic, so the check is a pure equality
+  assertion; fix is `bun run build:plugin:min` + recommit.
+
 ## [0.5.0] - 2026-04-29
 
 ### Added — phone UI

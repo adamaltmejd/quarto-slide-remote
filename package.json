@@ -22,6 +22,7 @@
     "test": "bun test",
     "test:smoke": "SR_INTEGRATION=1 bun test packages/worker/test/integration.test.ts",
     "size": "bun scripts/size-check.ts",
+    "check:bundle": "bun scripts/check-bundle-fresh.ts",
     "hooks:install": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
