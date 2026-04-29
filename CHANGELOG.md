@@ -6,6 +6,118 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-29
+
+### Added — phone UI
+
+- **Direction-based swipe for next/prev.** A horizontal-dominant
+  touch drag anywhere on the surface fires next (leftward) or prev
+  (rightward) — no edge zone, no aiming required. Pure pointer events,
+  no library. A 50 px horizontal travel commits the gesture; any
+  vertical-dominant movement (`|dy| > |dx|`) abandons, so notes-pane
+  scrolling still works when the touch happens to start in a swipeable
+  area. Touch only — mouse and stylus drags would hijack text
+  selection. The gesture commits on threshold-cross (not on pointerup)
+  and fires at most once per touch. NEXT/PREV/PAUSE buttons are
+  unchanged; the gesture supplements them.
+- **Body `touch-action: pan-y`** gives JS clean ownership of every
+  horizontal touch on the phone UI, so the swipe doesn't fight
+  browser-level horizontal pan. This does not suppress iOS Safari's
+  left-edge swipe-back (a system gesture that runs outside web
+  events); in the canonical QR-scan flow the tab has no back history,
+  so the system gesture is a no-op. Tradeoff: horizontal touch-pan
+  inside `<pre>` blocks in the notes pane is lost; long code lines
+  are clipped by the notes pane's `overflow-x: hidden`.
+
+### Added — speaker-notes rendering
+
+- **Tables in speaker notes.** Added `table`/`thead`/`tbody`/
+  `tfoot`/`tr`/`th`/`td`/`caption` to the sanitizer allowlist. Tables
+  render with collapsed borders and a small font; rows wider than the
+  notes pane clip cleanly at the right edge rather than blowing out the
+  layout.
+- **Notes links open in a new tab.** The sanitizer now forces
+  `target="_blank"` and `rel="noopener noreferrer"` on every `<a href>`.
+  Beyond the standard cross-origin hardening, this prevents the
+  phone-ui tab from accumulating forward history — without it, tapping
+  a notes link would navigate the remote away, and a subsequent
+  back-and-then-forward-swipe at the screen edge could re-navigate to
+  the link target.
+
+### Added — deck plugin
+
+- **Room persistence across deck reloads.** The presenter's mint
+  result (`roomId`, `presenterToken`, `pairCode`, `joinUrl`) is
+  cached in `sessionStorage` and re-used on the next page load,
+  so a Cmd+R on the deck no longer disconnects an already-paired
+  phone. If the underlying Durable Object has been evicted (24h
+  idle TTL or platform migration), the WS upgrade returns 401, the
+  client detects close-before-open, drops the stale entry, and
+  mints a fresh room. Stored in `sessionStorage` (not
+  `localStorage`) so closing the tab still resets the room — a
+  presenter who closes the deck and reopens it almost certainly
+  wants a clean session.
+- **Silent auto-resume on deck reload.** When sessionStorage has
+  a stored room, the controller now activates on `ready` without
+  the QR overlay flashing open-then-closed. The phone (still on
+  the same `/r/{roomId}` URL) reconnects on its own; the badge
+  goes straight to "paired" without presenter input. Shift+R still
+  opens the overlay on demand — for the case where the presenter
+  wants to inspect or regenerate the code mid-session.
+- **Regenerate room from the pairing overlay.** A small ↻ icon
+  next to the pair code invalidates the current pairing and mints
+  a fresh room. The currently paired phone is disconnected; new
+  credentials populate the overlay's QR / pair code in place.
+  Used to revoke a phone the presenter no longer wants connected.
+  `Client.regenerate()` is the underlying call, with a generation
+  counter on the WS so any in-flight reconnect attempt against
+  the old room is retired before the new mint.
+
+### Changed — phone UI navigation
+
+- **Landing → room uses `location.replace`** instead of `location.href`,
+  so the landing form doesn't sit in the back stack after the user
+  enters a code.
+
+### Fixed — phone UI
+
+- **Wide notes no longer push the layout off-screen.** Added
+  `min-width: 0` to the flex/grid chain (`.sr`, `.sr__body`,
+  `.sr__notes`) and `overflow-x: hidden` on the notes pane. A long
+  unbroken URL or a wide `<pre>` line previously stretched ancestors
+  past the viewport, cutting off the slide title and the NEXT/PREV/
+  PAUSE controls. URLs and long tokens now wrap (via the existing
+  `overflow-wrap: anywhere`); content that genuinely cannot wrap
+  (single-line `<pre>`, wide tables) clips silently.
+- **`<pre>` code blocks render as one rounded panel** instead of a
+  stack of per-line tinted boxes. The panel background moves from
+  the inline `<code>` rule to the `<pre>` rule, with the inner
+  `<code>` reset to transparent.
+
+### Fixed — deck plugin
+
+- **Stale-room recovery now reveals the pairing overlay.** When the
+  controller activates with `silent: true` (auto-resume from
+  sessionStorage) and the stored room turns out to be evicted, the
+  client falls back to a fresh mint and re-fires `onConnected` with
+  new credentials. Previously the `silent` gate stayed armed for the
+  client lifetime and suppressed the second open too, leaving the
+  presenter with a hidden QR and no recovery path — the phone, still
+  on the old `/r/{roomId}` URL, could not reconnect to the new room.
+  `silent` is now one-shot: consumed by the first `onConnected`, so
+  the post-recovery callback opens the overlay normally.
+
+### Changed — pairing overlay
+
+- **Modal keyboard trap.** While the overlay is mounted, every
+  document-level keydown is swallowed in the capture phase so Reveal's
+  arrow / `N` / `P` / `B` / `O` / space shortcuts can no longer
+  navigate the deck under the open QR. Esc still closes (the v0.4
+  capture-phase fix is preserved); browser-level shortcuts (Cmd+R,
+  Cmd+W, Tab focus) are unaffected because they don't ride DOM
+  propagation. Matches the panel's existing `aria-modal="true"`
+  intent — the runtime now agrees with the ARIA promise.
+
 ## [0.4.0] - 2026-04-28
 
 ### Added — worker

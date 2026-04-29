@@ -85,7 +85,10 @@ export function buildLanding(): HTMLElement {
       input.select();
       return;
     }
-    window.location.href = `/r/${parsed.roomId}#t=${parsed.token}`;
+    // location.replace (vs. .href) so the landing form doesn't sit in the
+    // back stack — a back-swipe from the remote then has nothing to navigate
+    // to and the history trap's first re-push is enough to anchor the user.
+    window.location.replace(`/r/${parsed.roomId}#t=${parsed.token}`);
   });
 
   // Auto-focus so paste-and-enter is immediate.

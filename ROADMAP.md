@@ -1,16 +1,16 @@
 # Roadmap
 
-**Status:** v0.4.0 shipped 2026-04-28 at
+**Status:** v0.5.0 shipped 2026-04-29 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
-v0.5 work starts here.
+Next release starts here.
 
 The MVP is functional end-to-end: deck → QR → phone → WS → Worker →
 Durable Object. Quality gates (biome lint, tsc typecheck, unit tests,
 integration smoke test, 3-scenario decktape-silent invariant, 30 KB gzip
 bundle budget) run in CI on every push. The full v0.1 / v0.2 / v0.3 /
-v0.4 ledger — what's implemented, hardened, and tested — lives in
-[CHANGELOG.md](CHANGELOG.md).
+v0.4 / v0.5 ledger — what's implemented, hardened, and tested — lives
+in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -157,20 +157,38 @@ mid-cycle.
 
 ---
 
-## v0.5 — Edge-swipe gesture
+## v0.5 — Swipe gesture, overlay polish, room persistence
 
-- [ ] **Edge-swipe gesture for next/prev** on the phone UI.
-      Photo-app-style: a thumb swipe from the right edge inward
-      advances the slide; left-edge inward goes back. Pure DOM
-      `pointerdown`/`pointermove`/`pointerup`, no third-party gesture
-      lib. Constraints: must not hijack scroll inside the notes pane
-      (only fire when the gesture starts within ~24 px of the screen
-      edge); must coexist with iOS Safari's system back-swipe (start
-      the recognized region a few pixels inboard so the system gesture
-      still wins at the bezel). Keep the existing big NEXT button —
-      gestures supplement, they don't replace. Split into its own
-      release because the iOS back-swipe coexistence is real
-      engineering and the wins in v0.4 shouldn't wait on it.
+**Status:** shipped 2026-04-29. Edge-swipe relaxed to a
+direction-based swipe (no edge zone) after device testing showed
+8 px insets fought iOS Safari's system back-swipe more than they
+helped. Bundled with overlay keyboard trap, sessionStorage room
+persistence with stale-token recovery, presenter-initiated room
+regenerate, and a sanitizer pass for tables and external links.
+
+- [x] **Direction-based swipe for next/prev** on the phone UI.
+      Originally scoped as an edge-swipe (right-edge inward = next,
+      left-edge inward = prev), the recognizer was widened to fire on
+      any horizontal-dominant touch drag on the surface — the edge
+      zone produced too many missed gestures and didn't actually buy
+      coexistence with iOS Safari's left-edge back-swipe (system
+      gesture, runs outside web events). Touch only; vertical-dominant
+      movement (`|dy| > |dx|`) abandons so notes-pane scrolling still
+      works. Body `touch-action: pan-y` gives JS clean ownership of
+      every horizontal touch on the phone UI.
+- [x] **Modal keyboard trap on the pairing overlay.** Reveal's
+      arrow / N / P / B / O / space shortcuts no longer navigate the
+      deck under the open QR; Esc still closes.
+- [x] **Room persistence + regenerate.** Mint result cached in
+      `sessionStorage` and re-used on deck reload (silent
+      auto-resume — no QR flash); stale tokens recovered via
+      close-before-open detection in `Client.openSocket`. Overlay
+      gained a ↻ icon to revoke the current pairing and mint a fresh
+      room without a deck reload.
+- [x] **Sanitizer pass for speaker notes.** Added
+      `table`/`thead`/`tbody`/`tfoot`/`tr`/`th`/`td`/`caption` to the
+      allowlist; forces `target="_blank"` and `rel="noopener
+      noreferrer"` on every `<a href>`.
 
 ---
 

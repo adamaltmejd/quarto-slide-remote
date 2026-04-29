@@ -5,6 +5,7 @@ import { loadQrChunk } from './qr-loader';
 
 export interface OverlayHandlers {
   onClose: () => void;
+  onRegenerate: () => void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -46,8 +47,20 @@ export class Overlay {
     closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.addEventListener('click', handlers.onClose);
 
+    // Sits inline with the pair code: tap to mint a new room and revoke the
+    // current pairing. Discoverable next to the code without claiming the
+    // visual real estate of a full-size button.
+    const regenBtn = el('button', 'sr-overlay__regen', '↻');
+    regenBtn.type = 'button';
+    regenBtn.setAttribute('aria-label', 'Generate new code');
+    regenBtn.title = 'Generate new code';
+    regenBtn.addEventListener('click', handlers.onRegenerate);
+
+    const codeValue = el('span', 'sr-overlay__code-wrap');
+    codeValue.append(this.codeEl, regenBtn);
+
     const meta = el('div', 'sr-overlay__meta');
-    meta.append(row('Code', this.codeEl), row('Status', this.statusEl));
+    meta.append(row('Code', codeValue), row('Status', this.statusEl));
 
     // Plain-text fallback for users without a phone camera, and a quick way
     // to open the phone UI in a second browser window for a laptop-only test.
@@ -75,14 +88,25 @@ export class Overlay {
     });
 
     this.onKeydown = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') return;
-      // Reveal also binds Escape on document (toggles overview). We register
-      // in the capture phase so this handler runs first; stopPropagation
-      // then prevents Reveal's bubble-phase handler from firing, so closing
-      // the overlay doesn't also pop the deck into overview mode.
-      e.preventDefault();
+      // Modal keyboard trap: Reveal's bubble-phase keydown listener navigates
+      // the deck on arrows / N / P / B / O / space. While the overlay is up
+      // those navigations happen invisibly under the QR. Swallow every keydown
+      // in the capture phase so Reveal never sees them. Browser-level
+      // shortcuts (Cmd+R, Cmd+W, Tab focus) are unaffected — they don't ride
+      // DOM propagation. Esc additionally closes the overlay; we preventDefault
+      // so the browser doesn't also exit fullscreen, and stopPropagation
+      // prevents Reveal from popping into overview mode.
+      //
+      // Note: we deliberately do NOT preventDefault on non-Escape keys, so the
+      // browser's own default actions (e.g. Space scrolling) still occur. That
+      // is harmless on a Reveal deck (the slide host is non-scrolling); if this
+      // overlay is ever embedded in a scrollable host, revisit this so the host
+      // doesn't scroll behind the modal.
       e.stopPropagation();
-      handlers.onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handlers.onClose();
+      }
     };
   }
 

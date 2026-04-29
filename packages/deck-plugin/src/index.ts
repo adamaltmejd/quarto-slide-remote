@@ -4,6 +4,7 @@
 import { Client, type ClientStatus } from './client';
 import { type PluginConfig, readConfig, shouldDisable } from './config';
 import { Overlay, StatusBadge } from './overlay';
+import { hasStoredRoom } from './room-storage';
 import type { RevealApi, RevealPlugin } from './types';
 
 // Capture this script's directory so the lazy QR chunk can be fetched
@@ -68,11 +69,19 @@ class SlideRemoteController {
     private reveal: RevealApi,
   ) {}
 
-  // Called by every activation trigger (?remote=1, Shift+R, button click).
-  // First call mints a room and connects; later calls just re-open the overlay
-  // so the presenter can rescan with another remote or recover after dismissing.
+  // Called by every activation trigger (?remote=1, Shift+R, button click,
+  // session-storage auto-resume). First call mints (or resumes from storage)
+  // and connects; later calls just re-open the overlay so the presenter can
+  // rescan with another remote or recover after dismissing.
+  // `silent: true` suppresses the overlay opening on the *first* onConnected
+  // — used when auto-resuming after a deck reload, where the phone is
+  // already paired and flashing the QR overlay open-and-closed is just
+  // noise. It is one-shot on purpose: if the stored room turns out to be
+  // stale, Client falls back to a fresh mint and onConnected re-fires with
+  // new credentials — at which point the phone (still on the old roomId
+  // URL) cannot reconnect, so we DO want to surface the QR for re-pairing.
   // shouldDisable() already guarantees a non-empty workerUrl.
-  activate(): void {
+  activate(opts: { silent?: boolean } = {}): void {
     if (this.client) {
       const room = this.client.getRoom();
       if (room) {
@@ -83,11 +92,22 @@ class SlideRemoteController {
       }
       return;
     }
-    this.overlay = new Overlay(PLUGIN_BASE, { onClose: () => this.overlay?.close() });
+    this.overlay = new Overlay(PLUGIN_BASE, {
+      onClose: () => this.overlay?.close(),
+      onRegenerate: () => {
+        // Regenerate is a presenter-initiated revocation: the current phone
+        // pairing is intentionally invalidated. mintAndConnect re-fires
+        // onConnected with the new credentials, so the overlay's QR / pair
+        // code update without any UI bookkeeping here.
+        void this.client?.regenerate();
+      },
+    });
     this.badge = new StatusBadge();
+    let suppressOpen = opts.silent ?? false;
     this.client = new Client(this.cfg.workerUrl, this.reveal, {
       onConnected: (joinUrl, roomId, pairCode) => {
-        this.overlay?.open(joinUrl, pairCode);
+        if (!suppressOpen) this.overlay?.open(joinUrl, pairCode);
+        suppressOpen = false;
         this.badge?.attach();
         this.badge?.setState('connected', `room ${roomId}`);
       },
@@ -125,6 +145,11 @@ function plugin(): RevealPlugin {
       if (params.has('remote')) {
         // Activate after Reveal is ready so getCurrentSlide() etc. are valid.
         reveal.on('ready', () => controller.activate());
+      } else if (hasStoredRoom()) {
+        // Deck reload after a prior pair: resume silently so the presenter
+        // doesn't have to press Shift+R again. The phone (which is on the
+        // same /r/{roomId} URL) reconnects on its own — no user action.
+        reveal.on('ready', () => controller.activate({ silent: true }));
       }
       // Shift+R to summon the pairing overlay mid-deck.
       document.addEventListener('keydown', (e) => {

@@ -84,14 +84,46 @@ describe('sanitizeNotesHtml — allowlist', () => {
     expect(clean).toContain('<p>hi</p>');
   });
 
+  test('preserves table tags so cell text doesnt collapse into one run', () => {
+    const dirty = `<table><thead><tr><th>k</th><th>v</th></tr></thead><tbody><tr><td>a</td><td>1</td></tr></tbody></table>`;
+    const clean = sanitizeNotesHtml(dirty);
+    for (const tag of ['table', 'thead', 'tbody', 'tr', 'th', 'td']) {
+      expect(clean).toContain(`<${tag}>`);
+    }
+    expect(clean).toContain('<th>k</th>');
+    expect(clean).toContain('<td>1</td>');
+  });
+
   test('keeps href on <a>, alt+src on <img>', () => {
-    const dirty = `<a href="https://example.com" target="_blank">x</a><img src="https://e/i.png" alt="i" width="10">`;
+    const dirty = `<a href="https://example.com">x</a><img src="https://e/i.png" alt="i" width="10">`;
     const clean = sanitizeNotesHtml(dirty);
     expect(clean).toContain('href="https://example.com"');
-    expect(clean).not.toContain('target=');
     expect(clean).toContain('alt="i"');
     expect(clean).toContain('src="https://e/i.png"');
     expect(clean).not.toContain('width');
+  });
+
+  test('forces target=_blank and rel on notes links so the phone-ui tab does not accumulate history', () => {
+    const dirty = `<a href="https://example.com">x</a>`;
+    const clean = sanitizeNotesHtml(dirty);
+    expect(clean).toContain('target="_blank"');
+    expect(clean).toContain('rel="noopener noreferrer"');
+  });
+
+  test('does not add target/rel to <a> without href (anchor without navigation)', () => {
+    const dirty = `<a>just text</a>`;
+    const clean = sanitizeNotesHtml(dirty);
+    expect(clean).not.toContain('target=');
+    expect(clean).not.toContain('rel=');
+  });
+
+  test('overrides any inbound target/rel — sanitizer is authoritative', () => {
+    const dirty = `<a href="https://example.com" target="_self" rel="opener">x</a>`;
+    const clean = sanitizeNotesHtml(dirty);
+    expect(clean).toContain('target="_blank"');
+    expect(clean).toContain('rel="noopener noreferrer"');
+    expect(clean).not.toContain('target="_self"');
+    expect(clean).not.toContain('rel="opener"');
   });
 });
 

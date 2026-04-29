@@ -13,7 +13,6 @@ export type ViewerStatus = 'connecting' | 'connected' | 'reconnecting' | 'discon
 export interface ClientHandlers {
   onStatus(text: ViewerStatus): void;
   onSnapshot(msg: Extract<ServerMessage, { t: 'state_snapshot' }>): void;
-  onPeer(presenter: number, viewer: number): void;
   onError(code: string, msg: string): void;
 }
 
@@ -93,7 +92,8 @@ export class ViewerClient {
         this.handlers.onSnapshot(msg);
         break;
       case 'peer':
-        this.handlers.onPeer(msg.presenter, msg.viewer);
+        // Phone UI doesn't surface peer count to its single user; the deck
+        // still uses these messages to dismiss the QR overlay on first pair.
         break;
       case 'error':
         this.handlers.onError(msg.code, msg.msg);

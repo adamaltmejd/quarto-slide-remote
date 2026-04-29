@@ -23,6 +23,16 @@ body {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+  /* `pan-y` lets the page own every horizontal gesture, so the direction-
+     based swipe gets clean ownership of horizontal touches anywhere on the
+     surface (no fight with browser-level horizontal pan, e.g. the scrollbar
+     in a wide `<pre>`). Note: this does NOT suppress iOS Safari's left-edge
+     swipe-back — that's a system-level gesture that runs outside web events.
+     In practice the phone UI opens from a fresh QR-scan tab with no back
+     history, so the system gesture has nothing to navigate to. Tradeoff:
+     horizontal touch-pan inside `.sr__notes pre` is lost; long code lines
+     are clipped by the notes pane's `overflow-x: hidden`. Acceptable. */
+  touch-action: pan-y;
 }
 
 .sr {
@@ -30,6 +40,11 @@ body {
   grid-template-rows: auto 1fr auto;
   flex: 1;
   min-height: 0;
+  /* Without min-width: 0, a wide descendant (long pre line, fat URL, table)
+     pulls the whole grid wider than the viewport — title cuts off, NEXT/PREV
+     get clipped, the layout reads as broken. The same reason min-height: 0
+     exists for the vertical axis. */
+  min-width: 0;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 
@@ -81,13 +96,6 @@ body {
 .sr__status {
   color: #c8c8c8;
 }
-.sr__peer {
-  color: #888;
-}
-.sr__peer:empty {
-  display: none;
-}
-
 .sr__pos {
   font-family: var(--sr-mono);
   color: #888;
@@ -101,8 +109,7 @@ body {
   gap: 4px;
   margin-left: 4px;
 }
-.sr__size-btn,
-.sr__repair {
+.sr__size-btn {
   appearance: none;
   border: 1px solid #2a2a2a;
   background: #181818;
@@ -116,24 +123,12 @@ body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.sr__size-btn:active,
-.sr__repair:active {
+.sr__size-btn:active {
   background: #222;
 }
 .sr__size-btn:disabled {
   opacity: 0.4;
   cursor: default;
-}
-.sr__repair {
-  margin-left: 4px;
-  font-size: 14px;
-  line-height: 1;
-  /* Quietly de-emphasized — discoverable without ever competing for attention. */
-  opacity: 0.5;
-}
-.sr__repair:hover,
-.sr__repair:focus-visible {
-  opacity: 1;
 }
 
 .sr__timer {
@@ -167,6 +162,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   gap: 10px;
   padding: 14px 16px 0;
 }
@@ -198,6 +194,12 @@ body {
   --sr-notes-scale: 1;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  /* overflow-x: hidden because (a) `touch-action: pan-y` on body makes a
+     horizontal scrollbar untouchable on iOS, and (b) we'd rather wide
+     content (long pre lines, tables) clip silently than push the column
+     wider than the viewport. Long URLs/tokens wrap via overflow-wrap. */
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   font-size: calc(17px * var(--sr-notes-scale));
@@ -216,10 +218,18 @@ body {
   font-family: var(--sr-mono);
 }
 .sr__notes pre {
-  /* Code blocks scroll horizontally inside the notes panel rather than
-     pushing the viewport wider than the screen. */
-  overflow-x: auto;
+  /* The block panel is the pre itself; the inner code element is just text.
+     Wide single-line code is clipped by .sr__notes' overflow-x: hidden. */
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0.5em 0;
   max-width: 100%;
+}
+.sr__notes pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 .sr__notes ul,
 .sr__notes ol {
@@ -235,6 +245,31 @@ body {
 .sr__notes img {
   max-width: 100%;
   height: auto;
+}
+.sr__notes table {
+  /* Wider tables clip at the notes-pane edge (overflow-x: hidden upstream)
+     rather than pushing the whole UI wider. Cells stay legible at a small
+     font; readers tilting the phone should still get the gist. */
+  border-collapse: collapse;
+  font-size: 0.85em;
+  margin: 0.5em 0;
+}
+.sr__notes th,
+.sr__notes td {
+  border: 1px solid #2a2a2a;
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.sr__notes th {
+  background: #1a1a1a;
+  font-weight: 600;
+}
+.sr__notes caption {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 4px;
+  text-align: left;
 }
 
 .sr__error {

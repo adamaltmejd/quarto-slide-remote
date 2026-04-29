@@ -6,13 +6,10 @@ export type { ViewerStatus };
 export interface UI {
   root: HTMLElement;
   setStatus(text: string, state: ViewerStatus): void;
-  setPeerCount(presenter: number, viewer: number): void;
   setState(s: SlideState): void;
   showError(msg: string): void;
   showToast(text: string, opts?: { tone?: ToastTone; sticky?: boolean }): void;
   hideToast(): void;
-  /** Replace the body with a terminal "scan a fresh QR" message. */
-  showFatal(text: string): void;
   /** Tear down the seconds-tick interval. Call before discarding the UI. */
   destroy(): void;
 }
@@ -24,7 +21,6 @@ export interface UIHandlers {
   onNext: () => void;
   onPause: () => void;
   onResetTimer: () => void;
-  onRepair: () => void;
 }
 
 const NOTES_SIZE_KEY = 'slide-remote.notes-size';
@@ -102,9 +98,6 @@ export function buildUi(handlers: UIHandlers): UI {
     handlers.onResetTimer();
   });
 
-  const peerEl = el('span', 'sr__peer', '');
-  peerEl.setAttribute('aria-label', 'Phones in room');
-
   const sizeDown = el('button', 'sr__size-btn', 'A−');
   sizeDown.type = 'button';
   sizeDown.setAttribute('aria-label', 'Decrease notes text size');
@@ -114,15 +107,10 @@ export function buildUi(handlers: UIHandlers): UI {
   const sizeGroup = el('span', 'sr__size');
   sizeGroup.append(sizeDown, sizeUp);
 
-  const repairBtn = el('button', 'sr__repair', '↻');
-  repairBtn.type = 'button';
-  repairBtn.setAttribute('aria-label', 'Re-pair: scan a fresh QR');
-  repairBtn.addEventListener('click', handlers.onRepair);
-
   const topLeft = el('div', 'sr__top-left');
   topLeft.append(dot, statusEl);
   const topRight = el('div', 'sr__top-right');
-  topRight.append(peerEl, sizeGroup, repairBtn);
+  topRight.append(sizeGroup);
   const top = el('header', 'sr__top');
   top.append(topLeft, posEl, topRight);
 
@@ -253,9 +241,6 @@ export function buildUi(handlers: UIHandlers): UI {
       statusEl.textContent = text;
       root.dataset.connection = state;
     },
-    setPeerCount(_presenter, viewer) {
-      peerEl.textContent = viewer > 1 ? `${viewer} phones` : '';
-    },
     setState(s) {
       posEl.textContent = `${s.h + 1} / ${s.total}`;
       titleTextEl.textContent = s.title || '(untitled)';
@@ -285,10 +270,6 @@ export function buildUi(handlers: UIHandlers): UI {
     },
     showToast,
     hideToast,
-    showFatal(text) {
-      destroy();
-      root.replaceChildren(buildFatal(text));
-    },
     destroy,
   };
 }
