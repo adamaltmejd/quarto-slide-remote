@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-29
+
 ### Added — phone UI
 
 - **Direction-based swipe for next/prev.** A horizontal-dominant
