@@ -73,9 +73,13 @@ class SlideRemoteController {
   // session-storage auto-resume). First call mints (or resumes from storage)
   // and connects; later calls just re-open the overlay so the presenter can
   // rescan with another remote or recover after dismissing.
-  // `silent: true` suppresses the overlay opening on initial connect — used
-  // when auto-resuming after a deck reload, where the phone is already
-  // paired and flashing the QR overlay open-and-closed is just noise.
+  // `silent: true` suppresses the overlay opening on the *first* onConnected
+  // — used when auto-resuming after a deck reload, where the phone is
+  // already paired and flashing the QR overlay open-and-closed is just
+  // noise. It is one-shot on purpose: if the stored room turns out to be
+  // stale, Client falls back to a fresh mint and onConnected re-fires with
+  // new credentials — at which point the phone (still on the old roomId
+  // URL) cannot reconnect, so we DO want to surface the QR for re-pairing.
   // shouldDisable() already guarantees a non-empty workerUrl.
   activate(opts: { silent?: boolean } = {}): void {
     if (this.client) {
@@ -99,9 +103,11 @@ class SlideRemoteController {
       },
     });
     this.badge = new StatusBadge();
+    let suppressOpen = opts.silent ?? false;
     this.client = new Client(this.cfg.workerUrl, this.reveal, {
       onConnected: (joinUrl, roomId, pairCode) => {
-        if (!opts.silent) this.overlay?.open(joinUrl, pairCode);
+        if (!suppressOpen) this.overlay?.open(joinUrl, pairCode);
+        suppressOpen = false;
         this.badge?.attach();
         this.badge?.setState('connected', `room ${roomId}`);
       },

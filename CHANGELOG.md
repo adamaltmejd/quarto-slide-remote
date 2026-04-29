@@ -92,6 +92,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the inline `<code>` rule to the `<pre>` rule, with the inner
   `<code>` reset to transparent.
 
+### Fixed — deck plugin
+
+- **Stale-room recovery now reveals the pairing overlay.** When the
+  controller activates with `silent: true` (auto-resume from
+  sessionStorage) and the stored room turns out to be evicted, the
+  client falls back to a fresh mint and re-fires `onConnected` with
+  new credentials. Previously the `silent` gate stayed armed for the
+  client lifetime and suppressed the second open too, leaving the
+  presenter with a hidden QR and no recovery path — the phone, still
+  on the old `/r/{roomId}` URL, could not reconnect to the new room.
+  `silent` is now one-shot: consumed by the first `onConnected`, so
+  the post-recovery callback opens the overlay normally.
+
 ### Changed — pairing overlay
 
 - **Modal keyboard trap.** While the overlay is mounted, every
