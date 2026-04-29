@@ -8,7 +8,6 @@ function noopHandlers(): UIHandlers {
     onNext() {},
     onPause() {},
     onResetTimer() {},
-    onRepair() {},
   };
 }
 
@@ -154,23 +153,6 @@ describe('phone-ui render', () => {
     timer?.click();
     expect(onResetTimer).toHaveBeenCalledTimes(1);
     ui.destroy();
-  });
-
-  test('repair button fires onRepair', () => {
-    const onRepair = mock(() => {});
-    const ui = buildUi({ ...noopHandlers(), onRepair });
-    document.body.append(ui.root);
-    ui.root.querySelector<HTMLButtonElement>('.sr__repair')?.click();
-    expect(onRepair).toHaveBeenCalledTimes(1);
-    ui.destroy();
-  });
-
-  test('showFatal replaces the body with a fresh-QR message', () => {
-    const ui = buildUi(noopHandlers());
-    document.body.append(ui.root);
-    ui.showFatal('Re-pair: scan a fresh QR code from the deck.');
-    expect(ui.root.querySelector('.sr__btn--next')).toBeNull();
-    expect(ui.root.querySelector('.sr-fatal')?.textContent).toContain('fresh QR');
   });
 
   test('showToast and hideToast surface a connection banner', () => {

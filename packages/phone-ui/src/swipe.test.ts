@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { attachEdgeSwipe, type SwipeHandlers } from './swipe';
+import { attachSwipe, type SwipeHandlers } from './swipe';
 
 interface Counts {
   prev: number;
@@ -20,7 +20,7 @@ function setup(): { target: HTMLElement; counts: Counts; handlers: SwipeHandlers
       counts.next++;
     },
   };
-  detachers.push(attachEdgeSwipe(target, handlers));
+  detachers.push(attachSwipe(target, handlers));
   return { target, counts, handlers };
 }
 
@@ -42,79 +42,103 @@ function pointer(
   });
 }
 
-describe('attachEdgeSwipe', () => {
-  // window.innerWidth is 1024 in happy-dom by default. Right edge zone is
-  // [1024 - 8 - 24, 1024 - 8] = [992, 1016]. Left edge zone is [8, 32].
-
-  test('right-edge inward swipe fires onNext', () => {
+describe('attachSwipe', () => {
+  test('rightward swipe from anywhere fires onPrev', () => {
     const { target, counts } = setup();
-    target.dispatchEvent(pointer('pointerdown', { x: 1000, y: 400 }));
-    target.dispatchEvent(pointer('pointermove', { x: 940, y: 400 }));
-    target.dispatchEvent(pointer('pointerup', { x: 940, y: 400 }));
-    expect(counts.next).toBe(1);
-    expect(counts.prev).toBe(0);
-  });
-
-  test('left-edge inward swipe fires onPrev', () => {
-    const { target, counts } = setup();
-    target.dispatchEvent(pointer('pointerdown', { x: 16, y: 400 }));
-    target.dispatchEvent(pointer('pointermove', { x: 80, y: 400 }));
-    target.dispatchEvent(pointer('pointerup', { x: 80, y: 400 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400 }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400 }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400 }));
     expect(counts.prev).toBe(1);
     expect(counts.next).toBe(0);
   });
 
-  test('touch starting outside the edge zones is ignored', () => {
+  test('leftward swipe from anywhere fires onNext', () => {
     const { target, counts } = setup();
-    // Mid-screen swipe inward — should not fire either handler.
-    target.dispatchEvent(pointer('pointerdown', { x: 500, y: 400 }));
-    target.dispatchEvent(pointer('pointermove', { x: 600, y: 400 }));
-    target.dispatchEvent(pointer('pointerup', { x: 600, y: 400 }));
-    expect(counts.next).toBe(0);
+    target.dispatchEvent(pointer('pointerdown', { x: 600, y: 400 }));
+    target.dispatchEvent(pointer('pointermove', { x: 540, y: 400 }));
+    target.dispatchEvent(pointer('pointerup', { x: 540, y: 400 }));
+    expect(counts.next).toBe(1);
     expect(counts.prev).toBe(0);
   });
 
-  test('touch starting on the bezel (x=0) is ignored to let iOS back-swipe win', () => {
+  test('rightward swipe starting at x=0 still fires onPrev (iOS back-swipe is suppressed via CSS)', () => {
     const { target, counts } = setup();
     target.dispatchEvent(pointer('pointerdown', { x: 0, y: 400 }));
     target.dispatchEvent(pointer('pointermove', { x: 80, y: 400 }));
     target.dispatchEvent(pointer('pointerup', { x: 80, y: 400 }));
-    expect(counts.prev).toBe(0);
+    expect(counts.prev).toBe(1);
   });
 
-  test('vertical scroll abandons the gesture (does not hijack notes scrolling)', () => {
+  test('vertical scroll abandons the gesture', () => {
     const { target, counts } = setup();
-    target.dispatchEvent(pointer('pointerdown', { x: 16, y: 400 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400 }));
     // Move predominantly vertically — should disqualify.
-    target.dispatchEvent(pointer('pointermove', { x: 30, y: 320 }));
+    target.dispatchEvent(pointer('pointermove', { x: 410, y: 320 }));
     // Even if we then move enough horizontally, the gesture stays abandoned.
-    target.dispatchEvent(pointer('pointermove', { x: 100, y: 320 }));
-    target.dispatchEvent(pointer('pointerup', { x: 100, y: 320 }));
+    target.dispatchEvent(pointer('pointermove', { x: 500, y: 320 }));
+    target.dispatchEvent(pointer('pointerup', { x: 500, y: 320 }));
     expect(counts.prev).toBe(0);
     expect(counts.next).toBe(0);
   });
 
   test('short swipe under the trigger threshold does not fire', () => {
     const { target, counts } = setup();
-    target.dispatchEvent(pointer('pointerdown', { x: 16, y: 400 }));
-    target.dispatchEvent(pointer('pointermove', { x: 50, y: 400 }));
-    target.dispatchEvent(pointer('pointerup', { x: 50, y: 400 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400 }));
+    target.dispatchEvent(pointer('pointermove', { x: 440, y: 400 }));
+    target.dispatchEvent(pointer('pointerup', { x: 440, y: 400 }));
     expect(counts.prev).toBe(0);
+    expect(counts.next).toBe(0);
   });
 
   test('mouse pointer is ignored', () => {
     const { target, counts } = setup();
-    target.dispatchEvent(pointer('pointerdown', { x: 16, y: 400, pointerType: 'mouse' }));
-    target.dispatchEvent(pointer('pointermove', { x: 80, y: 400, pointerType: 'mouse' }));
-    target.dispatchEvent(pointer('pointerup', { x: 80, y: 400, pointerType: 'mouse' }));
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400, pointerType: 'mouse' }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400, pointerType: 'mouse' }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400, pointerType: 'mouse' }));
     expect(counts.prev).toBe(0);
+  });
+
+  test('pen pointer is ignored', () => {
+    const { target, counts } = setup();
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400, pointerType: 'pen' }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400, pointerType: 'pen' }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400, pointerType: 'pen' }));
+    expect(counts.prev).toBe(0);
+  });
+
+  test('second pointerdown during an active gesture is ignored', () => {
+    // Two-finger sanity check: the first finger lands and starts moving, a
+    // second finger drops before the first commits. The second pointerdown
+    // must NOT void or overwrite the first; the first finger's swipe still
+    // resolves to onPrev.
+    const { target, counts } = setup();
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400, pointerId: 1 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 700, y: 400, pointerId: 2 }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400, pointerId: 1 }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400, pointerId: 1 }));
+    expect(counts.prev).toBe(1);
+    expect(counts.next).toBe(0);
+  });
+
+  test('a fresh gesture works after a previous one commits', () => {
+    // Ensure release() correctly clears the active slot so a second swipe in
+    // the opposite direction still triggers.
+    const { target, counts } = setup();
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400, pointerId: 1 }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400, pointerId: 1 }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400, pointerId: 1 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 600, y: 400, pointerId: 2 }));
+    target.dispatchEvent(pointer('pointermove', { x: 540, y: 400, pointerId: 2 }));
+    target.dispatchEvent(pointer('pointerup', { x: 540, y: 400, pointerId: 2 }));
+    expect(counts.prev).toBe(1);
+    expect(counts.next).toBe(1);
   });
 
   test('detach removes listeners', () => {
     const target = document.createElement('div');
     document.body.appendChild(target);
     const counts: Counts = { prev: 0, next: 0 };
-    const detach = attachEdgeSwipe(target, {
+    const detach = attachSwipe(target, {
       onPrev: () => {
         counts.prev++;
       },
@@ -123,9 +147,9 @@ describe('attachEdgeSwipe', () => {
       },
     });
     detach();
-    target.dispatchEvent(pointer('pointerdown', { x: 16, y: 400 }));
-    target.dispatchEvent(pointer('pointermove', { x: 80, y: 400 }));
-    target.dispatchEvent(pointer('pointerup', { x: 80, y: 400 }));
+    target.dispatchEvent(pointer('pointerdown', { x: 400, y: 400 }));
+    target.dispatchEvent(pointer('pointermove', { x: 460, y: 400 }));
+    target.dispatchEvent(pointer('pointerup', { x: 460, y: 400 }));
     expect(counts.prev).toBe(0);
   });
 });

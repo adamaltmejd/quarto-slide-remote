@@ -8,6 +8,7 @@ import type {
   ServerMessage,
 } from '@slide-remote/protocol';
 import { extractState } from './extract';
+import { clearStoredRoom, loadStoredRoom, storeRoom } from './room-storage';
 import type { RevealApi } from './types';
 
 const RECONNECT_BACKOFF_MS = [500, 1000, 2000, 4000, 8000, 15000] as const;
@@ -58,6 +59,18 @@ export class Client {
   // Epoch ms when the deck first navigated, or after the most recent
   // resetTimer command. Undefined until the first user navigation.
   private startedAt?: number;
+  // Tracks whether the active connection started from a sessionStorage hit
+  // rather than a fresh mint. If the WS closes before opening, we treat the
+  // stored room as stale and re-mint instead of looping reconnect attempts
+  // against a Durable Object that no longer recognizes the token.
+  private usingStoredRoom = false;
+  private hasOpenedSinceStart = false;
+  private revealHooksAttached = false;
+  // Bumped on every openSocket and on regenerate; in-flight WS handlers
+  // capture the value at create time and bail if it no longer matches.
+  // Lets regenerate() retire stale connections without races.
+  private generation = 0;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     private workerUrl: string,
@@ -70,6 +83,22 @@ export class Client {
   }
 
   async start(): Promise<void> {
+    // Re-use a previously-minted room if sessionStorage has one — keeps the
+    // phone paired across a deck reload. If the room is stale, openSocket
+    // detects the close-before-open and falls back to mintAndConnect.
+    const stored = loadStoredRoom();
+    if (stored) {
+      this.room = stored;
+      this.usingStoredRoom = true;
+      this.handlers.onConnected(stored.joinUrl, stored.roomId, stored.pairCode);
+      this.openSocket();
+      this.attachRevealHooks();
+      return;
+    }
+    await this.mintAndConnect();
+  }
+
+  private async mintAndConnect(): Promise<void> {
     this.handlers.onStatus('minting');
     try {
       const res = await fetch(new URL('/api/room/new', this.workerUrl).toString(), {
@@ -82,6 +111,7 @@ export class Client {
       this.handlers.onStatus('failed');
       return;
     }
+    storeRoom(this.room);
     this.handlers.onConnected(this.room.joinUrl, this.room.roomId, this.room.pairCode);
     this.openSocket();
     this.attachRevealHooks();
@@ -89,6 +119,7 @@ export class Client {
 
   private openSocket(): void {
     if (!this.room) return;
+    const myGen = ++this.generation;
     const url = new URL('/api/ws', this.workerUrl);
     url.protocol = url.protocol.replace(/^http/, 'ws');
     url.searchParams.set('room', this.room.roomId);
@@ -100,13 +131,17 @@ export class Client {
     this.ws = ws;
 
     ws.addEventListener('open', () => {
+      if (myGen !== this.generation) return;
       this.reconnectAttempt = 0;
+      this.usingStoredRoom = false;
+      this.hasOpenedSinceStart = true;
       this.handlers.onStatus('connected');
       // Push current state so a freshly reconnected viewer sees the right slide.
       this.pumpStateNow();
     });
 
     ws.addEventListener('message', (e) => {
+      if (myGen !== this.generation) return;
       if (typeof e.data !== 'string') return;
       try {
         this.handleServerMessage(JSON.parse(e.data) as ServerMessage);
@@ -116,6 +151,18 @@ export class Client {
     });
 
     ws.addEventListener('close', () => {
+      if (myGen !== this.generation) return;
+      // Close-before-open with a stored room means the underlying DO no
+      // longer recognises the token (24h idle TTL elapsed, or platform-level
+      // eviction). Drop the stale credentials and start over with a fresh
+      // mint instead of reconnect-looping forever.
+      if (this.usingStoredRoom && !this.hasOpenedSinceStart) {
+        this.usingStoredRoom = false;
+        clearStoredRoom();
+        this.room = undefined;
+        void this.mintAndConnect();
+        return;
+      }
       this.handlers.onStatus('disconnected');
       this.scheduleReconnect();
     });
@@ -123,6 +170,34 @@ export class Client {
     ws.addEventListener('error', () => {
       // close handler will fire next; nothing to do here.
     });
+  }
+
+  // Mint a fresh room, invalidating the current pairing. The phone (if any)
+  // sees its WS close and ends up at 'failed' once reconnect attempts
+  // exhaust against the new token. The presenter is the one initiating
+  // this, so the disruption is intentional.
+  async regenerate(): Promise<void> {
+    // Bump generation so any in-flight WS event handlers see a stale gen
+    // and bail out before doing reconnect or stale-room recovery work.
+    this.generation++;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch {
+        /* already closed */
+      }
+      this.ws = undefined;
+    }
+    this.room = undefined;
+    this.usingStoredRoom = false;
+    this.hasOpenedSinceStart = false;
+    this.reconnectAttempt = 0;
+    clearStoredRoom();
+    await this.mintAndConnect();
   }
 
   private scheduleReconnect(): void {
@@ -134,7 +209,10 @@ export class Client {
     const idx = Math.min(this.reconnectAttempt, RECONNECT_BACKOFF_MS.length - 1);
     const delay = RECONNECT_BACKOFF_MS[idx] ?? 15000;
     this.reconnectAttempt++;
-    setTimeout(() => this.openSocket(), delay);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.openSocket();
+    }, delay);
   }
 
   private handleServerMessage(msg: ServerMessage): void {
@@ -160,6 +238,9 @@ export class Client {
   }
 
   private attachRevealHooks(): void {
+    // Idempotent: a stored-room→stale→re-mint path calls this twice.
+    if (this.revealHooksAttached) return;
+    this.revealHooksAttached = true;
     // 'ready' intentionally omitted: openSocket() pumps once on 'open',
     // which already covers the initial state push.
     const events = [

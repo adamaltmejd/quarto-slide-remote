@@ -1,6 +1,10 @@
 name = "slide-remote"
 main = "src/index.ts"
 compatibility_date = "2025-01-15"
+# Per-version preview URLs at <version-prefix>-<worker>.<subdomain>.workers.dev,
+# so `wrangler versions upload` returns a testable URL without promoting to
+# production. Production traffic stays on the latest deployed version.
+preview_urls = true
 
 [assets]
 directory = "./assets"

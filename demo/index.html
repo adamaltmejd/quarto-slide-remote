@@ -16,8 +16,12 @@
     <script>
       // Stand-in for filter.lua: derive worker URL from the current host so the
       // demo works at 127.0.0.1, on the LAN, or via a tunnel without edits.
+      // `?worker=https://...` overrides — used to point the demo deck at a CF
+      // preview worker (e.g. wrangler versions upload) for parity testing.
       (() => {
-        const workerOrigin = `${location.protocol}//${location.hostname}:8787`;
+        const params = new URLSearchParams(location.search);
+        const workerOrigin =
+          params.get('worker') ?? `${location.protocol}//${location.hostname}:8787`;
         const metas = [
           ['slide-remote-worker-url', workerOrigin],
           ['slide-remote-show-button', 'false'],
@@ -69,6 +73,115 @@
             <p>
               Long unbroken tokens wrap rather than overflow:
               this/is/a/really/long/path/segment/that/should/not/cause/horizontal/scroll/of/the/whole/page.
+            </p>
+          </aside>
+        </section>
+
+        <section data-name="Long notes (vertical)">
+          <h2>Long notes — vertical scroll</h2>
+          <p>The notes pane on the phone should scroll independently.</p>
+          <aside class="notes">
+            <h3>Opening</h3>
+            <p>
+              Welcome. Today we're going to walk through the architecture of
+              slide-remote in some detail, then look at three tricky design
+              moments that pushed the boundaries of what a static-deck
+              companion can be expected to do.
+            </p>
+            <p>
+              First, the protocol. Every paired session is brokered by a
+              single Cloudflare Durable Object so there is exactly one
+              authoritative source of truth for slide state per room.
+              Reconnects pick up the latest snapshot rather than replaying
+              events.
+            </p>
+            <h3>Why a Durable Object</h3>
+            <p>
+              We considered three alternatives before settling on DO: a
+              relay-only Worker with no state (rejected — clients had to
+              re-derive everything on join), a Pub/Sub bus over Workers KV
+              (rejected — write latency too high), and a tiny Postgres
+              instance (rejected — operational overhead for what is
+              fundamentally an ephemeral session).
+            </p>
+            <p>
+              The DO model gives us strong consistency and free rate
+              limiting per room, at the cost of having to think carefully
+              about hibernation. The trickiest moment is the cold-resume:
+              when a DO wakes up after eviction, the WebSocket clients have
+              already buffered messages and are waiting for an ack. We hold
+              all writes until the snapshot is restored from storage; on
+              the order of 50&ndash;120 ms in practice.
+            </p>
+            <h3>Three tricky moments</h3>
+            <ol>
+              <li>
+                <strong>Pair-code collision.</strong> Six characters of
+                Crockford base32 gives ~1B codes; collisions only matter
+                across <em>concurrent</em> rooms, but we still rotate every
+                15 minutes to limit the brute-force window.
+              </li>
+              <li>
+                <strong>Reveal vs. our keydown handler.</strong> Reveal
+                binds Esc on document; we needed a capture-phase listener
+                so closing the QR overlay didn't also pop the deck into
+                overview mode. v0.5 widened that to swallow every keydown
+                while the overlay is open.
+              </li>
+              <li>
+                <strong>iOS swipe-back fight.</strong> The very first
+                edge-swipe iteration tried to claim x≈0 and lost every
+                time to Safari's system gesture. The fix turned out to be
+                a single CSS line: <code>touch-action: pan-y</code> on
+                <code>body</code>.
+              </li>
+            </ol>
+            <h3>Closing remarks</h3>
+            <p>
+              The principle running through all three of these is the same:
+              a static-deck companion lives inside a tightly-bounded
+              browser environment, so the cheapest fix is almost always to
+              respect the platform's expectations rather than fight them.
+              The DO buys us consistency; capture-phase listeners buy us
+              priority; <code>touch-action</code> buys us the gesture.
+              Each is a one-line concession that ends up doing all the
+              work.
+            </p>
+            <p>
+              Questions before we move on?
+            </p>
+          </aside>
+        </section>
+
+        <section data-name="Wide notes (horizontal)">
+          <h2>Wide notes — horizontal stress test</h2>
+          <p>Code, tables, and long tokens in the notes pane.</p>
+          <aside class="notes">
+            <p>
+              Long URL (should wrap):
+              <a href="https://example.com/very/long/path/segment/that/keeps/going/and/going/and/probably/should/wrap/somewhere">https://example.com/very/long/path/segment/that/keeps/going/and/going/and/probably/should/wrap/somewhere</a>
+            </p>
+            <p>
+              Long unbroken token (should wrap via overflow-wrap: anywhere):
+              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.
+            </p>
+            <p>Wide code block (cannot wrap — should clip or scroll):</p>
+            <pre><code>const reallyLongIdentifier = await fetch('https://api.example.com/v1/some/very/long/endpoint/path?with=lots&of=query&parameters=that&go=on&for=a&while&and=more').then((r) =&gt; r.json());</code></pre>
+            <p>Wide table (cannot wrap individual cells easily):</p>
+            <table>
+              <thead>
+                <tr><th>step</th><th>component</th><th>action</th><th>latency</th><th>notes</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>presenter-deck</td><td>POST /api/room/new</td><td>~40ms</td><td>mints room + presenter token</td></tr>
+                <tr><td>2</td><td>worker</td><td>WebSocket upgrade</td><td>~15ms</td><td>presenter joins, role=presenter</td></tr>
+                <tr><td>3</td><td>phone-ui</td><td>Scan QR / paste link</td><td>—</td><td>resolves /r/{roomId}#t={token}</td></tr>
+                <tr><td>4</td><td>phone-ui</td><td>WebSocket upgrade</td><td>~15ms</td><td>viewer joins, role=viewer</td></tr>
+              </tbody>
+            </table>
+            <p>
+              That's the lifecycle. A complete pair is four round-trips,
+              ignoring re-pair and timer-reset paths.
             </p>
           </aside>
         </section>

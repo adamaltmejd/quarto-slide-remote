@@ -1,8 +1,8 @@
 import type { Command } from '@slide-remote/protocol';
 import { buildLanding } from './landing';
 import { buildFatal, buildUi } from './render';
-import { clearSession, loadSession, saveSession } from './session';
-import { attachEdgeSwipe } from './swipe';
+import { loadSession, saveSession } from './session';
+import { attachSwipe } from './swipe';
 import { WakeLockManager } from './wake-lock';
 import { ViewerClient, type ViewerStatus } from './ws';
 
@@ -13,8 +13,6 @@ const STATUS_TEXT = {
   disconnected: 'disconnected',
   failed: 'failed',
 } as const;
-
-const REPAIR_TEXT = 'Re-pair: scan a fresh QR code from the deck.';
 
 function parseRoomId(): string | null {
   const m = /^\/r\/([^/]+)/.exec(window.location.pathname);
@@ -68,20 +66,16 @@ const ui = buildUi({
   onNext: () => send('next'),
   onPause: () => send('black'),
   onResetTimer: () => send('resetTimer'),
-  onRepair: () => {
-    client.stop();
-    void wakeLock.release();
-    clearSession();
-    ui.showFatal(REPAIR_TEXT);
-  },
 });
 document.body.replaceChildren(ui.root);
 
-// Photo-app-style edge swipes: right edge inward → next, left edge inward → prev.
-// Attached to body so the recognizer sees pointerdowns even when they land on
-// the notes pane (which scrolls vertically — the gesture self-disqualifies on
-// vertical movement, so scrolling still works).
-attachEdgeSwipe(document.body, {
+// Direction-based swipe: a horizontal-dominant drag anywhere on the body
+// fires prev (rightward) or next (leftward). Attached to body so the
+// recognizer sees pointerdowns regardless of which inner element they land on;
+// vertical-dominant moves abandon, so scrolling the notes pane still works.
+// iOS Safari's left-edge back-swipe is suppressed by `touch-action: pan-y`
+// on body in style.css.
+attachSwipe(document.body, {
   onPrev: () => send('prev'),
   onNext: () => send('next'),
 });
@@ -116,7 +110,6 @@ const client = new ViewerClient(window.location.origin, roomId, token, {
     prevStatus = state;
   },
   onSnapshot: (msg) => ui.setState(msg.payload),
-  onPeer: (presenter, viewer) => ui.setPeerCount(presenter, viewer),
   onError: (code, msg) => ui.showError(`${code}: ${msg}`),
 });
 

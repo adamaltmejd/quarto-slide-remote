@@ -4,19 +4,24 @@ import { Overlay } from './overlay';
 interface OverlayCtx {
   overlay: Overlay;
   closes: () => number;
+  regenerates: () => number;
 }
 
 const live: Overlay[] = [];
 
 function newOverlay(): OverlayCtx {
   let closes = 0;
+  let regenerates = 0;
   const overlay = new Overlay('https://example.test/', {
     onClose: () => {
       closes++;
     },
+    onRegenerate: () => {
+      regenerates++;
+    },
   });
   live.push(overlay);
-  return { overlay, closes: () => closes };
+  return { overlay, closes: () => closes, regenerates: () => regenerates };
 }
 
 afterEach(() => {
@@ -72,6 +77,18 @@ describe('Overlay keyboard trap', () => {
     ctx.overlay.open('https://join.test/', 'ABCDEF');
     ctx.overlay.close();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(ctx.closes()).toBe(0);
+  });
+});
+
+describe('Overlay regenerate button', () => {
+  test('clicking the regenerate button fires onRegenerate without closing', () => {
+    const ctx = newOverlay();
+    ctx.overlay.open('https://join.test/', 'ABCDEF');
+    const btn = document.querySelector<HTMLButtonElement>('.sr-overlay__regen');
+    expect(btn).not.toBeNull();
+    btn?.click();
+    expect(ctx.regenerates()).toBe(1);
     expect(ctx.closes()).toBe(0);
   });
 });

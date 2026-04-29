@@ -4,7 +4,6 @@ import { ViewerClient } from './ws';
 const noopHandlers = {
   onStatus() {},
   onSnapshot() {},
-  onPeer() {},
   onError() {},
 };
 

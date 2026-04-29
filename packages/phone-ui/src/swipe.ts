@@ -1,42 +1,62 @@
-// Edge-swipe gesture: swipe inward from the right edge to advance, from the
-// left edge to go back. Pure pointer events — no library.
+// Direction-based swipe gesture: a horizontal-dominant drag anywhere on the
+// surface fires onPrev (rightward) or onNext (leftward). Pure pointer events.
 //
 // Coexistence rules:
-// - Touch only. Mouse drags would hijack text selection and have no edge UX.
-// - Recognition starts EDGE_INSET pixels inboard from each side so iOS Safari's
-//   system back-swipe (which fires only at x≈0) still wins at the bezel.
-// - Vertical movement is treated as a notes-pane scroll: if |dy| ever exceeds
-//   |dx| during a tracked gesture, abandon. So the gesture cannot hijack
-//   scrolling that started in the edge zone.
+// - Touch only. Mouse/pen drags would hijack text selection and have no swipe
+//   UX.
+// - Vertical-dominant movement (|dy| > |dx|) abandons the gesture so notes-pane
+//   scrolling still works when the touch happens to start in a swipeable area.
+// - The host sets `touch-action: pan-y` on `body` so horizontal touches are
+//   owned by JS rather than the browser's horizontal-pan default. Note: this
+//   does NOT suppress iOS Safari's left-edge swipe-back — that gesture is
+//   system-level. In the typical QR-scan flow the phone UI loads in a fresh
+//   tab with no back history, so the system gesture has nothing to navigate
+//   to and visually does nothing. A swipe at x≈0 in a tab with history will
+//   still fire Safari back.
+// - Commits the moment horizontal travel crosses TRIGGER_DX, not on pointerup.
+//   After firing, the gesture self-disarms; a single touch fires at most once.
 
 export interface SwipeHandlers {
   onPrev: () => void;
   onNext: () => void;
 }
 
-const EDGE_INSET = 8;
-const EDGE_WIDTH = 24;
 const TRIGGER_DX = 50;
 
 interface ActiveGesture {
   pointerId: number;
-  side: 'left' | 'right';
   startX: number;
   startY: number;
 }
 
-export function attachEdgeSwipe(target: HTMLElement, handlers: SwipeHandlers): () => void {
+export function attachSwipe(target: HTMLElement, handlers: SwipeHandlers): () => void {
   let active: ActiveGesture | null = null;
 
+  const release = (pointerId: number): void => {
+    active = null;
+    // releasePointerCapture throws InvalidStateError if the pointer wasn't
+    // captured (e.g. setPointerCapture failed under happy-dom). Ignore.
+    try {
+      target.releasePointerCapture(pointerId);
+    } catch {
+      /* not captured */
+    }
+  };
+
   const onDown = (e: PointerEvent): void => {
-    if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-    const w = window.innerWidth;
-    let side: ActiveGesture['side'] | null = null;
-    if (e.clientX >= EDGE_INSET && e.clientX <= EDGE_INSET + EDGE_WIDTH) side = 'left';
-    else if (e.clientX >= w - EDGE_INSET - EDGE_WIDTH && e.clientX <= w - EDGE_INSET)
-      side = 'right';
-    if (!side) return;
-    active = { pointerId: e.pointerId, side, startX: e.clientX, startY: e.clientY };
+    if (e.pointerType !== 'touch') return;
+    // Ignore second-finger pointerdowns while a gesture is in flight — an
+    // accidental second touch shouldn't void or overwrite the first.
+    if (active) return;
+    active = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
+    // Pin the pointer to `target` so subsequent move/up events keep flowing
+    // even if the touch crosses an iframe or sibling element mid-gesture.
+    // happy-dom may not implement setPointerCapture; swallow the throw.
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {
+      /* unsupported in test env */
+    }
   };
 
   const onMove = (e: PointerEvent): void => {
@@ -44,20 +64,20 @@ export function attachEdgeSwipe(target: HTMLElement, handlers: SwipeHandlers): (
     const dx = e.clientX - active.startX;
     const dy = e.clientY - active.startY;
     if (Math.abs(dy) > Math.abs(dx)) {
-      active = null;
+      release(e.pointerId);
       return;
     }
-    if (active.side === 'left' && dx > TRIGGER_DX) {
+    if (dx > TRIGGER_DX) {
       handlers.onPrev();
-      active = null;
-    } else if (active.side === 'right' && dx < -TRIGGER_DX) {
+      release(e.pointerId);
+    } else if (dx < -TRIGGER_DX) {
       handlers.onNext();
-      active = null;
+      release(e.pointerId);
     }
   };
 
   const onEnd = (e: PointerEvent): void => {
-    if (active?.pointerId === e.pointerId) active = null;
+    if (active?.pointerId === e.pointerId) release(e.pointerId);
   };
 
   target.addEventListener('pointerdown', onDown);

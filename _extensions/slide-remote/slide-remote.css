@@ -75,6 +75,11 @@
 .sr-overlay__label {
   color: #8a8a8a;
 }
+.sr-overlay__code-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .sr-overlay__code {
   font-family:
     ui-monospace,
@@ -107,8 +112,31 @@
   color: #bfdbfe;
 }
 
+.sr-overlay__regen {
+  /* Inline ↻ icon next to the pair code: small, quiet, discoverable.
+     Sized to roughly match the surrounding monospace code text. */
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0 4px;
+  color: #6a6a6a;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 80ms ease;
+}
+.sr-overlay__regen:hover,
+.sr-overlay__regen:focus-visible {
+  color: #d4d4d4;
+  outline: none;
+}
+.sr-overlay__regen:active {
+  color: #fafafa;
+}
+
 .sr-overlay__hint {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   font-size: 12px;
   color: #8a8a8a;
   text-align: center;

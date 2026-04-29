@@ -6,6 +6,7 @@ const ALLOWED_TAGS = new Set([
   'a',
   'b',
   'br',
+  'caption',
   'code',
   'em',
   'i',
@@ -16,6 +17,13 @@ const ALLOWED_TAGS = new Set([
   'pre',
   'span',
   'strong',
+  'table',
+  'tbody',
+  'td',
+  'tfoot',
+  'th',
+  'thead',
+  'tr',
   'u',
   'ul',
 ]);
@@ -84,6 +92,15 @@ function sanitizeNode(node: Node, out: Document): Node | null {
       }
       created.setAttribute(attr.name, attr.value);
     }
+  }
+  // Force notes links to open in a new tab. Reasons: (1) the phone-ui tab
+  // is single-purpose and we don't want it to accumulate forward history
+  // (a forward-swipe after a returning back-swipe would otherwise re-navigate
+  // away to the link target), (2) `noopener noreferrer` is the standard
+  // hardening for cross-origin links opened from authoritative UI.
+  if (tag === 'a' && created.hasAttribute('href')) {
+    created.setAttribute('target', '_blank');
+    created.setAttribute('rel', 'noopener noreferrer');
   }
   for (const c of children) created.appendChild(c);
   return created;
