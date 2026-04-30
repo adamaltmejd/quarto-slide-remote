@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — phone UI
+
+- **Version + GitHub-link footer.** A muted `slide-remote vX.Y.Z` link in
+  the bottom-right corner of the phone UI on both the landing screen and
+  `/r/{room}`, pointing at
+  [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote).
+  Mostly there for the bare-Worker-origin landing case (someone curious
+  about what they just landed on); also rides as a `position: fixed`
+  corner element on `/r/{room}` with `pointer-events: none` on the
+  wrapper so it can't steal a stray tap from the PAUSE button beneath
+  it. The version string is injected at phone-ui build time from the
+  root `package.json#version` via Bun's `define`, so it stays in sync
+  with releases automatically — no runtime fetch.
+
 ## [0.5.1] - 2026-04-30
 
 ### Hardened — worker

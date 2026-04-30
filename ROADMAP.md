@@ -214,7 +214,7 @@ bundle-freshness CI gate with one piece of preemptive hardening
 **Status:** unreleased. The next round of small UX nudges. Pick
 items off as they earn their slot.
 
-- [ ] **Version + GitHub link footer on the phone UI.** A tiny,
+- [x] **Version + GitHub link footer on the phone UI.** A tiny,
       muted `slide-remote vX.Y.Z` in the bottom-right of the page,
       linking to
       [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote).
@@ -223,9 +223,11 @@ items off as they earn their slot.
       since the layout already locks the body to `100dvh` and the notes
       pane is the only scrollable region — a `position: fixed` corner
       element won't fight content. Inject the version from the root
-      `package.json` at phone-ui build time (e.g. via a Bun build
-      `define` for `__SR_VERSION__`) so it stays in sync with releases
-      automatically; no runtime fetch.
+      `package.json` at phone-ui build time (via a Bun build `define`
+      for `__SR_VERSION__`) so it stays in sync with releases
+      automatically; no runtime fetch. `pointer-events: none` on the
+      wrapper, `pointer-events: auto` on the link, so the PAUSE button
+      under it stays fully tappable.
 
 ---
 

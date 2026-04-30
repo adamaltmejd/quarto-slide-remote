@@ -1,4 +1,5 @@
 import type { Command } from '@slide-remote/protocol';
+import { buildFooter } from './footer';
 import { buildLanding } from './landing';
 import { buildFatal, buildUi } from './render';
 import { loadSession, saveSession } from './session';
@@ -25,8 +26,14 @@ function parseToken(): string | null {
   return new URLSearchParams(hash).get('t');
 }
 
+// Mount any top-level view alongside the persistent footer. Each call
+// regenerates the footer node since replaceChildren detaches the prior.
+function mount(view: HTMLElement): void {
+  document.body.replaceChildren(view, buildFooter());
+}
+
 function fatal(text: string): void {
-  document.body.replaceChildren(buildFatal(text));
+  mount(buildFatal(text));
 }
 
 const roomId = parseRoomId();
@@ -34,7 +41,7 @@ if (!roomId) {
   // Bare URL — show the manual-entry form. The form parses pasted join
   // links or typed pair codes (e.g. R12V-P138) and navigates to the
   // /r/{roomId}#t={token} URL, which re-runs this entry script.
-  document.body.replaceChildren(buildLanding());
+  mount(buildLanding());
   // Halt the rest of main — there's nothing to do without a room.
   throw new Error('landing');
 }
@@ -67,7 +74,7 @@ const ui = buildUi({
   onPause: () => send('black'),
   onResetTimer: () => send('resetTimer'),
 });
-document.body.replaceChildren(ui.root);
+mount(ui.root);
 
 // Direction-based swipe: a horizontal-dominant drag anywhere on the body
 // fires prev (rightward) or next (leftward). Attached to body so the
