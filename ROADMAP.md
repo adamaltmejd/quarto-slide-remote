@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** v0.5.1 shipped 2026-04-30 at
+**Status:** v0.5.2 shipped 2026-04-30 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
 Next release starts here.
@@ -211,8 +211,9 @@ bundle-freshness CI gate with one piece of preemptive hardening
 
 ## v0.5.2 — small followups
 
-**Status:** unreleased. The next round of small UX nudges. Pick
-items off as they earn their slot.
+**Status:** shipped 2026-04-30. A muted version + GitHub-link
+footer on the phone UI, build-time injected from root
+`package.json#version`.
 
 - [x] **Version + GitHub link footer on the phone UI.** A tiny,
       muted `slide-remote vX.Y.Z` in the bottom-right of the page,
