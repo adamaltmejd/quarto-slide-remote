@@ -192,10 +192,26 @@ regenerate, and a sanitizer pass for tables and external links.
 
 ---
 
-## v0.6 — small followups
+## v0.5.1 — preemptive hardening
 
-**Status:** unreleased. Catch-all for the next round of small UX
-nudges. Pick items off as they earn their slot.
+**Status:** unreleased. Patch release bundling the bundle-freshness
+CI gate (already merged) with one piece of preemptive hardening.
+
+- [x] **Rate-limit `/api/room/new`.** Cloudflare Workers Rate
+      Limiting binding (`MINT_RATE_LIMITER`, 30 mints per 60s per
+      `cf-connecting-ip`) returns 429 when the bucket is drained.
+      Free-tier; the goal is purely to cap mint-loop abuse on the
+      only unauthenticated public endpoint. Bucket is generous
+      enough to never bother a human (one room per talk in
+      practice). `wrangler dev` simulates the binding in-process,
+      so the integration smoke suite covers the 429 path.
+
+---
+
+## v0.5.2 — small followups
+
+**Status:** unreleased. The next round of small UX nudges. Pick
+items off as they earn their slot.
 
 - [ ] **Version + GitHub link footer on the phone UI.** A tiny,
       muted `slide-remote vX.Y.Z` in the bottom-right of the page,
@@ -212,16 +228,31 @@ nudges. Pick items off as they earn their slot.
 
 ---
 
+## v2.0 — Audience role + protocol cleanup
+
+**Status:** future. Protocol-breaking; bumps to 2.0.
+
+The wire protocol's `Role` union still uses `viewer` for what
+user-facing copy now calls *remote* (the phone or laptop driving
+the deck). The rename has been deferred since v0.4 to coincide
+with adding a separate read-only audience role, which would
+naturally take the `viewer` name.
+
+- [ ] **Audience role.** Read-only WebSocket attachment that
+      receives `SlideState` snapshots but cannot publish commands.
+      Trust model TBD — likely a separate per-room audience token
+      (issued at mint alongside the presenter token) so revoking
+      the remote doesn't kick the audience.
+- [ ] **Rename `Role` union from `viewer` → `remote`.** Coincides
+      with audience landing as the new `viewer`. Phone-ui and
+      deck-plugin clients update in the same release; protocol
+      version field bumps so older clients can refuse cleanly.
+
+---
+
 ## Risks and known issues
 
 Tracked here so we don't forget; not in any priority order. Items
 resolved by shipped releases are dropped — see CHANGELOG for closeouts.
 
-- **iOS Safari + Low Power Mode** drops WebSockets aggressively when the screen sleeps. The reconnect ceiling (`MAX_RECONNECT_ATTEMPTS = 60`) caps the spinner at ~15 minutes; wake lock + fast reconnect (both v0.2) help further, but the screen-off → screen-on cycle still needs explicit testing on a real device.
-- **DO SQLite + `new_sqlite_classes` migrations are one-way.** Pin compat date carefully and version any migration changes.
-- **`presenterToken` in URL hash** keeps it out of server logs but lands in browser history. Acceptable today.
-- **`/api/room/new` CORS** is currently `*` and unrate-limited. CORS allowlisting is a non-starter (deck origins are user-hosted Quarto sites and unknown to the Worker). Idle DO cleanup (v0.4) bounds storage; add a CF WAF rate-limit rule only if real-world traffic shows mint-loop abuse.
-- **`quarto add` resolves to a git tag**, not `main`. Release discipline matters; CI must create tags for every release. All releases through v0.3.1 followed this; future releases must too.
-- **Course repo CI**: the consumer's `publish-course-material.yml` renders decks with the plugin loaded. Our own CI proves silence across 3 scenarios (decktape, missing worker-url, kill switch). Promote the consumer's check from manual to asserted when convenient.
-- **Multi-presenter is unenforced**: two presenter connections to the same room means last-write-wins on snapshots. Documented in `packages/protocol/src/index.ts`; `RoomDO.webSocketMessage` would need a role check to enforce single-presenter. Low-impact in practice (one talk → one presenter token).
-- **`Role` naming lags user-facing language**: the wire protocol still uses `viewer` for what user-facing copy now calls *remote* (since v0.4's laptop-as-remote support). Rename deferred to coincide with adding a separate read-only audience role, which would naturally take the `viewer` name. Flagged in the v0.4 changelog; do not silently rename without the audience-role landing.
+- (none open — last entry, `/api/room/new` rate-limit, moved into v0.5.1 scope)
