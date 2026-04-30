@@ -18,3 +18,13 @@ class_name = "RoomDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
+
+# Rate-limit /api/room/new per client IP. Cloudflare Workers Rate Limiting
+# is on the free tier; bucket is generous enough to never bother a human
+# (humans mint maybe 1 room per talk) but caps script-driven mint loops.
+# Period must be 10 or 60.
+[[unsafe.bindings]]
+name = "MINT_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }

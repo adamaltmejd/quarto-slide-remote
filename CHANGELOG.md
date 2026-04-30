@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Hardened — worker
+
+- **Rate-limit `/api/room/new`.** Cloudflare Workers Rate Limiting
+  binding (`MINT_RATE_LIMITER`, 30 mints per 60 s per
+  `cf-connecting-ip`) gates the only unauthenticated public endpoint;
+  excess requests get a 429 with the standard CORS headers. Bucket is
+  generous enough to never bother a human (one room minted per talk in
+  practice) but caps script-driven mint loops cheaply — free tier covers
+  our scale. Local `wrangler dev` simulates the binding in-process, so
+  the integration smoke suite covers the 429 path. Pure preemptive
+  hardening — no real-world abuse seen yet.
+
 ### Added — CI
 
 - **Bundle-freshness check** (`scripts/check-bundle-fresh.ts`, new
@@ -528,7 +540,11 @@ beyond opening the deck URL.
   is enabled. Worker readiness probe switched from `POST /api/room/new`
   (minted orphan rooms each retry) to `GET /`.
 
-[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.1
 [0.1.0]: https://github.com/adamaltmejd/quarto-slide-remote/releases/tag/v0.1.0

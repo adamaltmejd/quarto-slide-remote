@@ -10,6 +10,7 @@ export { RoomDO } from './room';
 interface Env {
   ASSETS: Fetcher;
   ROOM: DurableObjectNamespace;
+  MINT_RATE_LIMITER: RateLimit;
 }
 
 const CORS_HEADERS = {
@@ -42,6 +43,14 @@ export default {
     }
 
     if (url.pathname === '/api/room/new' && request.method === 'POST') {
+      // `cf-connecting-ip` is set by Cloudflare's edge; in local `wrangler dev`
+      // it's absent, so we fall back to a constant key (every request shares
+      // the bucket — fine for tests, never reached in prod).
+      const ip = request.headers.get('cf-connecting-ip') ?? 'local';
+      const { success } = await env.MINT_RATE_LIMITER.limit({ key: ip });
+      if (!success) {
+        return new Response('rate limited', { status: 429, headers: CORS_HEADERS });
+      }
       const presenterToken = genCode();
       let roomId = '';
       let ok = false;

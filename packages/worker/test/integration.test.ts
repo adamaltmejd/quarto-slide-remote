@@ -272,4 +272,20 @@ describe.skipIf(!enabled)('worker integration', () => {
     presenter.ws.close();
     late.ws.close();
   });
+
+  // Runs last because it deliberately exhausts the per-IP rate-limit bucket
+  // for the rest of the 60s window. Other tests in this file rely on being
+  // able to mint freely.
+  test('mint endpoint returns 429 once the rate limit bucket is drained', async () => {
+    let saw429 = false;
+    for (let i = 0; i < 50; i++) {
+      const r = await fetch(`${base}/api/room/new`, { method: 'POST' });
+      await r.text();
+      if (r.status === 429) {
+        saw429 = true;
+        break;
+      }
+    }
+    expect(saw429).toBe(true);
+  });
 });
