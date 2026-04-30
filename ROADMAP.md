@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** v0.5.0 shipped 2026-04-29 at
+**Status:** v0.5.1 shipped 2026-04-30 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
 Next release starts here.
@@ -194,8 +194,9 @@ regenerate, and a sanitizer pass for tables and external links.
 
 ## v0.5.1 — preemptive hardening
 
-**Status:** unreleased. Patch release bundling the bundle-freshness
-CI gate (already merged) with one piece of preemptive hardening.
+**Status:** shipped 2026-04-30. Patch release bundling the
+bundle-freshness CI gate with one piece of preemptive hardening
+(`/api/room/new` rate limit on the only unauthenticated endpoint).
 
 - [x] **Rate-limit `/api/room/new`.** Cloudflare Workers Rate
       Limiting binding (`MINT_RATE_LIMITER`, 30 mints per 60s per
