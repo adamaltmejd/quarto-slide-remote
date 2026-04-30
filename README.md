@@ -161,16 +161,19 @@ remove it once you `quarto add` the published extension.
 ### Quality gates
 
 ```bash
-bun run lint         # biome
-bun run typecheck    # tsc --noEmit, all workspaces
-bun test             # unit tests across sanitize, extract, protocol, render, ws
-bun run test:smoke   # integration: boots `wrangler dev`, exercises the WS protocol
-bun run size         # bundle-size budget (30 KB gzip)
-bun run hooks:install   # one-time: enable the tracked pre-commit hook
+bun run lint           # biome
+bun run typecheck      # tsc --noEmit, all workspaces
+bun test               # unit tests
+bun run test:smoke     # integration: boots `wrangler dev`, exercises the WS protocol
+bun run size           # bundle-size budget (30 KB gzip)
+bun run check:bundle   # committed _extensions/slide-remote/*.js matches a fresh build
+bun run hooks:install  # one-time: enable the tracked pre-commit hook
 ```
 
-CI runs lint → typecheck → unit tests → build → size budget → integration →
-decktape-silent on every push and PR. See `.github/workflows/ci.yml`.
+CI runs four jobs on every push and PR: `unit` (lint → typecheck → unit
+tests → build → size budget), `integration` (smoke test),
+`decktape-silent` (silent-invariant assertion), and `bundle-fresh` (the
+`check:bundle` gate above). See `.github/workflows/ci.yml`.
 
 ## Road-test (real iPhone, public Worker)
 
