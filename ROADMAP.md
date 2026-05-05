@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** v0.5.2 shipped 2026-04-30 at
+**Status:** v0.5.3 shipped 2026-05-05 at
 [github.com/adamaltmejd/quarto-slide-remote](https://github.com/adamaltmejd/quarto-slide-remote)
 (public, MIT, Worker live at `slide-remote.adamaltmejd.workers.dev`).
 Next release starts here.

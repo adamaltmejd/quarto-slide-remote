@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-05-05
+
 ### Fixed — deck-plugin
 
 - **QR overlay 404 on `quarto add` consumers.** The lazy QR chunk
@@ -583,7 +585,8 @@ beyond opening the deck URL.
   is enabled. Worker readiness probe switched from `POST /api/room/new`
   (minted orphan rooms each retry) to `GET /`.
 
-[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/adamaltmejd/quarto-slide-remote/compare/v0.4.0...v0.5.0
