@@ -232,6 +232,35 @@ footer on the phone UI, build-time injected from root
 
 ---
 
+## v1.0 — Field-tested, stable contract
+
+**Status:** pending. Code-wise the surface is closed; what's left is
+real-world usage. After a few more talks given with the remote, if no
+papercuts surface (or the ones that do get fixed), promote the tree
+to 1.0 and stamp the wire protocol + setup story as stable.
+
+Five v0.x releases in four days hardened the implementation; one
+podium session so far. 1.0 is the moment to say "this is what I trust
+on stage" — that requires more than CI green.
+
+- [ ] **Dogfood pass.** Use the remote in a few more real talks.
+      Note any friction (gestures, pairing, latency, phone-side
+      ergonomics, notes rendering) and either fix or explicitly
+      accept before tagging. Likely surfaces a small batch of v0.6
+      polish work first.
+- [ ] **Re-affirm the single-presenter trust model.** Today the
+      Worker doesn't enforce single-presenter — two clients with the
+      same token both publish, last write wins. CLAUDE.md flags this
+      as "intentional for v0.x." Decide for 1.x: keep as-is and drop
+      the v0.x caveat from CLAUDE.md, or tighten (reject a second
+      presenter socket on the DO).
+- [ ] **Document the v2.0 protocol break in the 1.0 CHANGELOG.** The
+      `Role` rename (`viewer` → `remote`) + new audience role is
+      already scoped for v2.0. Flag it as a known upcoming break so
+      `quarto add` consumers pinning to v1 know what to expect.
+
+---
+
 ## v2.0 — Audience role + protocol cleanup
 
 **Status:** future. Protocol-breaking; bumps to 2.0.
