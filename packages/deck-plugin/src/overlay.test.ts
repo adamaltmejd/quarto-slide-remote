@@ -12,7 +12,7 @@ const live: Overlay[] = [];
 function newOverlay(): OverlayCtx {
   let closes = 0;
   let regenerates = 0;
-  const overlay = new Overlay('https://example.test/', {
+  const overlay = new Overlay({
     onClose: () => {
       closes++;
     },

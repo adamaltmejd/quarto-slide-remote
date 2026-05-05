@@ -6,6 +6,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed — deck-plugin
+
+- **QR overlay 404 on `quarto add` consumers.** The lazy QR chunk
+  (`slide-remote-qr.js`) was not declared in `_extension.yml`, so Quarto
+  never copied it into the rendered deck's plugin directory — the runtime
+  loader's `<script>` injection 404'd and the overlay fell back to its
+  "Could not load QR — open the link below." text. Reproduced on the
+  v0.5.2 deployment of `adamaltmejd/datascience-course`.
+
+### Changed — deck-plugin
+
+- **Inlined the QR library into the main bundle.** The split into a
+  lazy-loaded `slide-remote-qr.js` chunk shipped in v0.4 to keep the
+  parse cost off the 99% non-paired path; in practice the chunk was
+  carried by every Quarto consumer (just never copied next to the main
+  bundle, which is how it 404'd above), and the "lazy" architecture
+  added a `pluginBase` URL discovery, a `<script>`-injection loader,
+  an error-fallback render path, a sibling-file freshness CI gate, and
+  a class of deployment bugs around sibling-file packaging. Combined
+  bundle is 12.3 KB gzip — well under the 30 KB budget. Net deletion
+  of `qr-chunk.ts`, `qr-chunk-name.ts`, and `qr-loader.ts`; the only
+  caller (`overlay.ts`) now imports `qrSvg` directly. `_extension.yml`
+  is back to a single `script:` entry, and the bundle-fresh CI gate
+  drops to a single file.
+
 ## [0.5.2] - 2026-04-30
 
 ### Added — phone UI

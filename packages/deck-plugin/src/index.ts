@@ -7,17 +7,6 @@ import { Overlay, StatusBadge } from './overlay';
 import { hasStoredRoom } from './room-storage';
 import type { RevealApi, RevealPlugin } from './types';
 
-// Capture this script's directory so the lazy QR chunk can be fetched
-// from the same _extensions/slide-remote/ directory as the main bundle.
-// `document.currentScript` is set while the IIFE is first executing; falls
-// back to the document base URL if the plugin is loaded as a module (which
-// we don't currently support, but the fallback keeps the loader sane).
-const PLUGIN_BASE = ((): string => {
-  const script = document.currentScript as HTMLScriptElement | null;
-  if (script?.src) return new URL('.', script.src).toString();
-  return new URL('.', document.baseURI).toString();
-})();
-
 // Overlay status surfaces the *pairing* lifecycle, not the deck-side WS
 // health: a deck WS in 'connected' state has only reached the worker,
 // not been paired with a remote. The controller upgrades this to 'paired'
@@ -92,7 +81,7 @@ class SlideRemoteController {
       }
       return;
     }
-    this.overlay = new Overlay(PLUGIN_BASE, {
+    this.overlay = new Overlay({
       onClose: () => this.overlay?.close(),
       onRegenerate: () => {
         // Regenerate is a presenter-initiated revocation: the current phone

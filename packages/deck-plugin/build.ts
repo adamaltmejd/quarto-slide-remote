@@ -1,26 +1,22 @@
-// Builds the deck plugin as two IIFE bundles:
-//   - slide-remote.js     — main plugin, loaded by Quarto's _extension.yml
-//   - slide-remote-qr.js  — lazy chunk holding qrcode-generator (~50 KB raw),
-//                            fetched via <script> only when the pairing
-//                            overlay opens, so the 99% non-paired case
-//                            doesn't pay the QR library's parse cost.
+// Builds the deck plugin as a single IIFE bundle (slide-remote.js) loaded by
+// Quarto's _extension.yml. The QR library is bundled inline — at ~12 KB gzip
+// total it's well under the 30 KB budget, and shipping a single file removes
+// a class of "missing sibling chunk" deployment bugs.
 //
 // Usage:
 //   bun packages/deck-plugin/build.ts            # readable dev build
 //   bun packages/deck-plugin/build.ts --minify   # minified release build
 //   bun packages/deck-plugin/build.ts --watch    # rebuild on source change
 //
-// Override the output directory with SLIDE_REMOTE_PLUGIN_OUT=/abs/path/to.js.
-// Both bundles land next to each other regardless. Used by `scripts/demo.ts`
-// to write into demo/.cache/ so a watch rebuild never dirties the committed
-// minified bundle in `_extensions/`.
+// Override the output path with SLIDE_REMOTE_PLUGIN_OUT=/abs/path/to.js.
+// Used by `scripts/demo.ts` to write into demo/.cache/ so a watch rebuild
+// never dirties the committed minified bundle in `_extensions/`.
 
 import { watch } from 'node:fs';
 import { mkdir, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { QR_CHUNK_FILENAME } from './src/qr-chunk-name';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -34,35 +30,28 @@ const mainBasename = basename(mainOut);
 
 const minify = process.argv.includes('--minify');
 
-async function buildOne(entry: string, outBasename: string): Promise<void> {
+async function build(): Promise<void> {
+  await mkdir(outDir, { recursive: true });
   const result = await Bun.build({
-    entrypoints: [entry],
+    entrypoints: [resolve(srcDir, 'index.ts')],
     outdir: outDir,
-    naming: outBasename,
+    naming: mainBasename,
     target: 'browser',
     format: 'iife',
     minify,
     sourcemap: 'none',
   });
   if (!result.success) {
-    console.error(`[deck-plugin] build failed for ${outBasename}`);
+    console.error('[deck-plugin] build failed');
     for (const log of result.logs) console.error(log);
     process.exitCode = 1;
     return;
   }
-  const outPath = resolve(outDir, outBasename);
+  const outPath = resolve(outDir, mainBasename);
   const raw = (await stat(outPath)).size;
   const gz = gzipSync(await Bun.file(outPath).bytes()).length;
   const tag = minify ? 'min' : 'dev';
   console.log(`[deck-plugin] built → ${outPath} (${tag}, ${raw} B / ${gz} B gzip)`);
-}
-
-async function build(): Promise<void> {
-  await mkdir(outDir, { recursive: true });
-  await Promise.all([
-    buildOne(resolve(srcDir, 'index.ts'), mainBasename),
-    buildOne(resolve(srcDir, 'qr-chunk.ts'), QR_CHUNK_FILENAME),
-  ]);
 }
 
 await build();
